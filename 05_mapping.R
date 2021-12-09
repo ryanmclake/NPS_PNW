@@ -70,7 +70,7 @@ RAP_polygon_map <- ggplot() +
   labs(title = "Raptorial Rotifer driver TS by lake")
 
 RAP_polygon_map
-ggsave("./figures/Raptorial_map_ts_by_lake.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Raptorial_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
 
 
 MICRO_polygon_map <- ggplot() +
@@ -92,7 +92,7 @@ MICRO_polygon_map <- ggplot() +
   labs(title = "Microphageous Rotifer driver TS by Lake")
 
 MICRO_polygon_map
-ggsave("./figures/Microfageous_map_ts_by_lake.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Microfageous_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
 
 CLAD_polygon_map <- ggplot() +
   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
@@ -113,7 +113,7 @@ CLAD_polygon_map <- ggplot() +
   labs(title = "Cladoceran driver TS by lake")
 
 CLAD_polygon_map
-ggsave("./figures/Cladocerans_map_ts_by_lake.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Cladocerans_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
 
 
 COPE_polygon_map <- ggplot() +
@@ -135,7 +135,7 @@ COPE_polygon_map <- ggplot() +
   labs(title = "Copepod driver TS by lake")
 
 COPE_polygon_map
-ggsave("./figures/Copepods_map_ts_by_lake.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Copepods_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
 
 
 ### MAPS BY PARK ###
@@ -158,7 +158,7 @@ RAP_park_polygon_map <- ggplot() +
   labs(title = "Raptorial Rotifer driver TS by park")
 
 RAP_park_polygon_map
-ggsave("./figures/Raptorial_map_ts_by_park.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Raptorial_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
 
 MICRO_park_polygon_map <- ggplot() +
@@ -180,7 +180,7 @@ MICRO_park_polygon_map <- ggplot() +
   labs(title = "Microphageous Rotifer driver TS by park")
 
 MICRO_park_polygon_map
-ggsave("./figures/Micro_map_ts_by_park.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Micro_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
 
 CLAD_park_polygon_map <- ggplot() +
@@ -202,7 +202,7 @@ CLAD_park_polygon_map <- ggplot() +
   labs(title = "Cladoceran driver TS by park")
 
 CLAD_park_polygon_map
-ggsave("./figures/Cladoceran_map_ts_by_park.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Cladoceran_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
 
 COPE_park_polygon_map <- ggplot() +
@@ -224,7 +224,7 @@ COPE_park_polygon_map <- ggplot() +
   labs(title = "Copepod driver TS by park")
 
 COPE_park_polygon_map
-ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 15, height = 10, units = "in")
+ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
 
 

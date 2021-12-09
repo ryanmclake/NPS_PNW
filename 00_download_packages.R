@@ -10,11 +10,8 @@ library(OpenStreetMap)
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse,reshape2,zoo,vegan,readxl,lme4,
                viridis,patchwork,ggpubr,visdat,labdsv,
-               hydroGOF,reshape2,ggvegan,janitor,MuMIn,
-               sf,tigris,ggrepel,osmdata,rgdal,ggmap, ggplot2)
-
-
-
+               reshape2,ggvegan,janitor,MuMIn,
+               sf,tigris,ggrepel,osmdata,rgdal,ggmap)
 
 source("./R/functions/ScreePlotFunction.R")
 
@@ -33,3 +30,4 @@ slope <- function(x, y){
   m <- nom / denom
   return(m)
 }
+
