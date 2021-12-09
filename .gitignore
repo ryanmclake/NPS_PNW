@@ -1,9 +1,10 @@
 # History files
 .Rhistory
 .Rapp.history
-
+.DS_Store
 # Session Data files
 .RData
+./data/temp_time_series/
 
 # User-specific files
 .Ruserdata
