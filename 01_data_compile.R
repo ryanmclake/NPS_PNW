@@ -1,3 +1,29 @@
+###############################
+# MACROINVERTEBRATE COMPILATION
+###############################
+
+# Macroinvert data
+macro_counts <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
+                           sheet = "BMI_Counts")
+# Lookup table for macro taxonomy
+macro_lookup <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
+                           sheet = "Taxon_Lookup")
+
+full_macro <- inner_join(x = macro_counts, y = macro_lookup, by = c("Taxon"))%>%
+  filter(!is.na(Count)) %>%
+  group_by(Park, Site_ID, Year, Order) %>%
+  summarise(sum_phylum_count = sum(Count))%>%
+  rename(park_code = Park,
+         site_code = Site_ID,
+         event_year = Year)%>%
+  melt(., id.vars = c("park_code","site_code","event_year","Order"))%>%
+  mutate(across(everything(), gsub, pattern = "_", replacement = ""))%>%
+  mutate(event_year = as.character(event_year),
+         value = as.numeric(value))%>%
+  spread(., key = Order, value = value)
+
+full_macro[is.na(full_macro)] <- 0
+
 #########################
 # ZOOPLANKTON COMPILATION
 #########################
@@ -107,10 +133,36 @@ env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code
             funs((log10(.+1))))%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
-  ungroup(.)
+  ungroup(.)%>%
+  filter(RAP >= 0)
 
 viz_dat <- vis_dat(env_zoop_data)
 viz_dat
 ggsave("./figures/MISSING_DATA_CHECK.jpg", width = 10, height = 8, units = "in")
 
-mapping_zoop <- env_zoop_data %>% select(park_code, site_code, lon, lat, Elevation_m, Depth_max, fish, solar_jas)
+mapping_zoop <- env_zoop_data %>%
+  select(park_code, site_code, lon, lat, Elevation_m, Depth_max, fish, solar_jas)
+
+
+
+macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_code","event_year"))%>%
+  select(-variable)%>%
+  filter(site_code != "Palisades" & site_code != "EasyRidge")%>%
+  filter(park_code !=  "OLYM")%>%
+  group_by(site_code, park_code)%>%
+  mutate(fish = ifelse((CCT_ever+TSS_ever+WCT_ever+RBT_ever+BRK_ever)>0,1,0))%>%
+  select(-CCT_ever, -TSS_ever, -WCT_ever, -RBT_ever, -BRK_ever)%>%
+  mutate(lake_temp = (SurfTemp+BotTemp+MidTemp)/3,
+         stability = SurfTemp - BotTemp)%>%
+  select(-SurfTemp,-BotTemp,-MidTemp)%>%
+  mutate_at(vars(-site_code, -park_code, -event_year),
+            funs(imputeTS::na_interpolation(., option = "spline")))%>%
+  mutate_at(vars(-site_code, -park_code, -event_year, -lon, -lat, -DOC, -fish),
+            funs((log10(.+1))))%>%
+  mutate(DOC = ifelse(DOC<0,0,DOC))%>%
+  mutate(DOC = log10(DOC+1))%>%
+  ungroup(.)
+
+viz_dat <- vis_dat(macro_join)
+viz_dat
+ggsave("./figures/MISSING_DATA_CHECK_macros.jpg", width = 10, height = 8, units = "in")

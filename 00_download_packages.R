@@ -9,9 +9,9 @@ library(OpenStreetMap)
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse,reshape2,zoo,vegan,readxl,lme4,
-               viridis,patchwork,ggpubr,visdat,labdsv,
-               reshape2,ggvegan,janitor,MuMIn,
-               sf,tigris,ggrepel,osmdata,rgdal,ggmap)
+               viridis,patchwork,ggpubr,visdat,labdsv,psych,
+               reshape2,ggvegan,janitor,MuMIn,kableExtra,
+               sf,tigris,ggrepel,osmdata,rgdal,ggmap,corrplot)
 
 source("./R/functions/ScreePlotFunction.R")
 
