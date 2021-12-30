@@ -124,14 +124,16 @@ env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code
   mutate(fish = ifelse((CCT_ever+TSS_ever+WCT_ever+RBT_ever+BRK_ever)>0,1,0))%>%
   select(-CCT_ever, -TSS_ever, -WCT_ever, -RBT_ever, -BRK_ever)%>%
   mutate(lake_temp = (SurfTemp+BotTemp+MidTemp)/3,
-         stability = SurfTemp - BotTemp)%>%
+         stability = SurfTemp - BotTemp,
+         delta_temp = lake_temp - lag(lake_temp),
+         delta_temp = ifelse(is.nan(delta_temp),NA,delta_temp))%>%
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
   mutate_at(vars(Ca, Chlorophyll, DOC, ice_out_doy,`Total N`,
                  `Total P`,lake_temp,stability),
             funs((log10(.+1))))%>%
-  mutate_at(vars(-site_code, -park_code, -event_year),
+  mutate_at(vars(-site_code, -park_code, -event_year, -delta_temp),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
   ungroup(.)%>%
   filter(RAP >= 0)
@@ -153,11 +155,12 @@ macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_c
   mutate(fish = ifelse((CCT_ever+TSS_ever+WCT_ever+RBT_ever+BRK_ever)>0,1,0))%>%
   select(-CCT_ever, -TSS_ever, -WCT_ever, -RBT_ever, -BRK_ever)%>%
   mutate(lake_temp = (SurfTemp+BotTemp+MidTemp)/3,
-         stability = SurfTemp - BotTemp)%>%
+         stability = SurfTemp - BotTemp,
+         delta_temp = lake_temp - lag(lake_temp))%>%
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
-  mutate_at(vars(-site_code, -park_code, -event_year, -lon, -lat, -DOC, -fish),
+  mutate_at(vars(-site_code, -park_code, -event_year, -lon, -lat, -DOC, -fish, -delta_temp),
             funs((log10(.+1))))%>%
   mutate(DOC = ifelse(DOC<0,0,DOC))%>%
   mutate(DOC = log10(DOC+1))%>%
