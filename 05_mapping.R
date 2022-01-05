@@ -226,8 +226,29 @@ COPE_park_polygon_map <- ggplot() +
 COPE_park_polygon_map
 ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
-
-
+map_macro_drivers <- map_drivers %>% select(-site_code, -park_code, -Elevation_m,
+                                            -Depth_max, -fish, -solar_jas) %>%
+  melt(., id.vars = c("lon", "lat"))
+# Map with polygons, ripe for adding hillshades to...if we can find them
+macro_polygon_map <- ggplot() +
+  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+  ggrepel::geom_text_repel(color="white",
+                           data = lake_centroids,
+                           aes(geometry = Shape, label = short_code),
+                           stat = "sf_coordinates",
+                           min.segment.length = 0) +
+  geom_point(data = map_macro_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  theme_bw() +
+  theme(panel.background = element_rect(fill = "steelblue1"),
+        panel.grid = element_blank()) +
+  scale_fill_manual(values = c("grey70", "grey40")) +
+  ylab("Latitude") +
+  xlab("Longitude")+
+  facet_wrap(~variable)
+macro_polygon_map
+ggsave("./figures/macro_map_AR_by_park.jpg", width = 20, height = 25, units = "in")
 
 # terrain_map <- openmap(upperLeft = c(49.35, -124.5),
 #                        lowerRight = c(46.5, -120),
