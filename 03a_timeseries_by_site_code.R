@@ -71,7 +71,7 @@ for(s in 1:length(sites)){
   all_models <- dredge(all, extra = c("R^2","adjR^2"),
                        fixed = "macro_lag", rank = "AICc")
 
-  best_model <- as.data.frame(subset(all_models, delta == 0))
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
 
   best_fits <- best_model[,colSums(is.na(best_model))<nrow(best_model)] %>%
     summarise_all(funs(mean))
@@ -109,3 +109,71 @@ drivers <- drivers %>% rename(Amphipoda = `X1`,
   mutate(site_code = as.character(sites))
 
 map_drivers <- left_join(drivers, mapping_zoop, by = "site_code")
+
+
+
+cca_df_ts <- cca_df %>%
+  group_by(site_code)%>%
+  mutate(RAP_lag = lag(RAP),
+         MICRO_lag = lag(MICRO),
+         CLAD_lag = lag(CLAD),
+         COPE_lag = lag(COPE))%>%
+  mutate_at(vars(-site_code, -park_code, -event_year),
+            funs(imputeTS::na_interpolation(., option = "spline")))
+
+sites <- c(unique(cca_df_ts$site_code))
+
+taxa <- c("CLAD",
+          "COPE",
+          "MICRO",
+          "RAP")
+
+drivers <- data.frame(matrix(NA, nrow = length(sites),ncol = length(taxa)))
+
+for(h in 1:length(taxa)){
+  for(s in 1:length(sites)){
+
+    ts <- cca_df_ts %>%
+      filter(site_code == sites[s])%>%
+      select(taxa[h],paste0(taxa[h],"_lag"), delta_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+      rename(TP = `Total P`,
+             TN = `Total N`,
+             macro = taxa[h],
+             macro_lag = paste0(taxa[h],"_lag"))
+
+    if(sum(ts$macro != 0)){
+
+      all <- glm(macro ~ macro_lag+
+                   delta_temp+Chlorophyll+
+                   TN+TP+Ca,
+                 na.action = "na.fail",
+                 data = ts)
+
+      all_models <- dredge(all, extra = c("R^2","adjR^2"),
+                           fixed = "macro_lag", rank = "AICc")
+
+      best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+      best_fits <- best_model[,colSums(is.na(best_model))<nrow(best_model)] %>%
+        summarise_all(funs(mean))
+
+      best_fits <- best_fits %>% select(-`R^2`, -`adjR^2`, -df, -logLik, -AICc, -delta, -weight)%>%
+        cbind(., sites[s])%>%
+        reshape2::melt(., id.vars = "sites[s]")%>%
+        select(variable)
+
+      drivers[s,h] <- as.data.frame(cbind(paste(best_fits$variable,collapse=", ")))
+    }
+  }
+}
+
+drivers <- drivers %>% rename(CLAD = `X1`,
+                              COPE = `X2`,
+                              MICRO = `X3`,
+                              RAP = `X4`)%>%
+  mutate(site_code = as.character(sites))
+
+zoop_map_drivers <- left_join(drivers, mapping_zoop, by = "site_code")
+
+
+

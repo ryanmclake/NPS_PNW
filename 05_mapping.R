@@ -229,6 +229,14 @@ ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "
 map_macro_drivers <- map_drivers %>% select(-site_code, -park_code, -Elevation_m,
                                             -Depth_max, -fish, -solar_jas) %>%
   melt(., id.vars = c("lon", "lat"))
+
+map_macro_drivers$value  <- gsub("(Intercept), macro_lag","" , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub(", macro_lag","" , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub(", macro_lag, ",", " , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub("macro_lag, "," " , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub("macro_lag","None" , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub("(Intercept)"," " , map_macro_drivers$value ,ignore.case = TRUE)
+map_macro_drivers$value  <- gsub("(Intercept),"," " , map_macro_drivers$value ,ignore.case = TRUE)
 # Map with polygons, ripe for adding hillshades to...if we can find them
 macro_polygon_map <- ggplot() +
   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
@@ -242,7 +250,8 @@ macro_polygon_map <- ggplot() +
   geom_point(data = map_macro_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
   theme_bw() +
   theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 15)) +
   scale_fill_manual(values = c("grey70", "grey40")) +
   ylab("Latitude") +
   xlab("Longitude")+
@@ -250,26 +259,51 @@ macro_polygon_map <- ggplot() +
 macro_polygon_map
 ggsave("./figures/macro_map_AR_by_park.jpg", width = 20, height = 25, units = "in")
 
-# terrain_map <- openmap(upperLeft = c(49.35, -124.5),
-#                        lowerRight = c(46.5, -120),
-#                        type = 'stamen-terrain',zoom=8)
-#
-#
-# OSM_map <- OpenStreetMap::autoplot.OpenStreetMap(terrain_map) +
-#   geom_sf(size=0,data = st_transform(x = lake_centroids, crs = 3857),
-#           aes(geometry = Shape, alpha=0),  inherit.aes = F) +
-#   labs(caption = "\U00a9 OpenStreetMap contributors") +
-#   xlab("Longitude") +
-#   ylab("Latitude") +
-#   #geom_point(data = COPE_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-#   # geom_text(size=3,data = st_transform(x = lake_centroids, crs = 3857),
-#   #           aes(geometry = Shape, label = short_code,color=ParkCode), inherit.aes = FALSE,
-#   #           stat = "sf_coordinates")+
-#
-#    ggrepel::geom_text_repel(color="black",segment.size=0.5,box.padding = 0.5,
-#      data = st_transform(x = lake_centroids, crs = 3857),
-#      aes(geometry = Shape, label = short_code), inherit.aes = FALSE,
-#      stat = "sf_coordinates",
-#      min.segment.length = 0) +
-#   theme_bw()+
-#   theme(legend.position = "none")
+
+map_zoop_drivers <- zoop_map_drivers %>% select(-site_code, -park_code, -Elevation_m,
+                                            -Depth_max, -fish, -solar_jas) %>%
+  melt(., id.vars = c("lon", "lat"))
+
+# Map with polygons, ripe for adding hillshades to...if we can find them
+zoop_polygon_map <- ggplot() +
+  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+  ggrepel::geom_text_repel(color="white",
+                           data = lake_centroids,
+                           aes(geometry = Shape, label = short_code),
+                           stat = "sf_coordinates",
+                           min.segment.length = 0) +
+  geom_point(data = map_zoop_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  theme_bw() +
+  theme(panel.background = element_rect(fill = "steelblue1"),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 15)) +
+  scale_fill_manual(values = c("grey70", "grey40")) +
+  ylab("Latitude") +
+  xlab("Longitude")+
+  facet_wrap(~variable)
+zoop_polygon_map
+ggsave("./figures/zoop_map_AR_by_park.jpg", width = 20, height = 25, units = "in")
+
+
+
+ terrain_map <- openmap(upperLeft = c(49.35, -124.5),
+                        lowerRight = c(46.5, -120),
+                        type = 'stamen-terrain',zoom=8)
+
+
+ OSM_map <- OpenStreetMap::autoplot.OpenStreetMap(terrain_map) +
+   geom_sf(size=0,data = st_transform(x = lake_centroids, crs = 3857),
+           aes(geometry = Shape, alpha=0),  inherit.aes = F) +
+   labs(caption = "\U00a9 OpenStreetMap contributors") +
+   xlab("Longitude") +
+   ylab("Latitude") +
+   geom_point(data = map_zoop_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+   ggrepel::geom_text_repel(color="black",segment.size=0.5,box.padding = 0.5,
+      data = st_transform(x = lake_centroids, crs = 3857),
+      aes(geometry = Shape, label = short_code), inherit.aes = FALSE,
+      stat = "sf_coordinates",
+      min.segment.length = 0) +
+   theme_bw()+
+   theme(legend.position = "none")
