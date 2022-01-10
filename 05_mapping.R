@@ -226,17 +226,15 @@ COPE_park_polygon_map <- ggplot() +
 COPE_park_polygon_map
 ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
-map_macro_drivers <- map_drivers %>% select(-site_code, -park_code, -Elevation_m,
+map_macro_drivers <- map_drivers %>% select(-Elevation_m,
                                             -Depth_max, -fish, -solar_jas) %>%
-  melt(., id.vars = c("lon", "lat"))
+  melt(., id.vars = c("lon", "lat", "site_code", "park_code"))
 
-map_macro_drivers$value  <- gsub("(Intercept), macro_lag","" , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub(", macro_lag","" , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub(", macro_lag, ",", " , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub("macro_lag, "," " , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub("macro_lag","None" , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub("(Intercept)"," " , map_macro_drivers$value ,ignore.case = TRUE)
-map_macro_drivers$value  <- gsub("(Intercept),"," " , map_macro_drivers$value ,ignore.case = TRUE)
+ggplot(map_macro_drivers, aes(x = variable, group = value, fill = value)) +
+  geom_bar(stat = "count") +
+  scale_fill_viridis(discrete = T)+
+  facet_wrap(~site_code)
+
 # Map with polygons, ripe for adding hillshades to...if we can find them
 macro_polygon_map <- ggplot() +
   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
@@ -260,9 +258,15 @@ macro_polygon_map
 ggsave("./figures/macro_map_AR_by_park.jpg", width = 20, height = 25, units = "in")
 
 
-map_zoop_drivers <- zoop_map_drivers %>% select(-site_code, -park_code, -Elevation_m,
-                                            -Depth_max, -fish, -solar_jas) %>%
-  melt(., id.vars = c("lon", "lat"))
+map_zoop_drivers <- zoop_map_drivers %>% select(-Depth_max, -fish, -solar_jas) %>%
+  melt(., id.vars = c("lon", "lat", "site_code", "park_code", "Elevation_m"))
+
+library(plotly)
+p <- ggplot(map_zoop_drivers, aes(x = variable, group = value, fill = value)) +
+  geom_bar(stat = "count") +
+  scale_fill_viridis(discrete = T)+
+  facet_wrap(~site_code)
+ggplotly(p)
 
 # Map with polygons, ripe for adding hillshades to...if we can find them
 zoop_polygon_map <- ggplot() +

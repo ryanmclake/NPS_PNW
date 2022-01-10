@@ -48,33 +48,45 @@ taxa <- c("Amphipoda",
 
 
 drivers <- data.frame(matrix(NA, nrow = length(sites),ncol = length(taxa)))
+drivers2 <- data.frame(matrix(NA, nrow = length(sites),ncol = length(taxa)))
+AIC <- data.frame(matrix(NA, nrow = length(sites),ncol = length(taxa)))
+AIC2 <- data.frame(matrix(NA, nrow = length(sites),ncol = length(taxa)))
 
 for(h in 1:length(taxa)){
 for(s in 1:length(sites)){
 
   ts <- macro_join_ts %>%
     filter(site_code == sites[s])%>%
-    select(taxa[h],paste0(taxa[h],"_lag"), delta_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+    select(taxa[h],paste0(taxa[h],"_lag"), lake_temp,`Total P`,`Total N`, Ca, Chlorophyll, ice_out_doy)%>%
     rename(TP = `Total P`,
            TN = `Total N`,
            macro = taxa[h],
-           macro_lag = paste0(taxa[h],"_lag"))
+           macro_lag = paste0(taxa[h],"_lag"))%>%
+    mutate(NtoP = TN/TP)%>%
+    select(-TP, -TN)%>%
+    mutate(lake_temp_lag = lag(lake_temp),
+           Ca_lag = lag(Ca),
+           Chlorophyll_lag = lag(Chlorophyll),
+           ice_out_doy_lag = lag(ice_out_doy),
+           NtoP_lag = lag(NtoP))%>%
+    mutate_at(vars(-site_code),
+              funs(imputeTS::na_interpolation(., option = "spline")))
 
   if(sum(ts$macro != 0)){
 
-  all <- glm(macro ~ macro_lag+
-               delta_temp+Chlorophyll+
-               TN+TP+Ca,
-             na.action = "na.fail",
-             data = ts)
+  t <- gls(macro~lake_temp+Ca+Chlorophyll+ice_out_doy+NtoP, correlation = corAR1(form= ~1), data = ts)
 
-  all_models <- dredge(all, extra = c("R^2","adjR^2"),
-                       fixed = "macro_lag", rank = "AICc")
+  all_models <- dredge(t, extra = c("R^2","adjR^2"), rank = "AICc")
 
-  best_model <- as.data.frame(subset(all_models, delta <= 2))
+  best_model <- as.data.frame(subset(all_models, delta == 0))
 
   best_fits <- best_model[,colSums(is.na(best_model))<nrow(best_model)] %>%
     summarise_all(funs(mean))
+
+  aic <- best_fits %>% select(AICc)%>%
+    cbind(., sites[s])%>%
+    reshape2::melt(., id.vars = "sites[s]")%>%
+    select(value)
 
   best_fits <- best_fits %>% select(-`R^2`, -`adjR^2`, -df, -logLik, -AICc, -delta, -weight)%>%
     cbind(., sites[s])%>%
@@ -82,11 +94,51 @@ for(s in 1:length(sites)){
     select(variable)
 
   drivers[s,h] <- as.data.frame(cbind(paste(best_fits$variable,collapse=", ")))
+  AIC[s,h] <- as.data.frame(cbind(paste(aic$value,collapse=", ")))
+
+
+  p <- gls(macro~lake_temp_lag+Ca_lag+Chlorophyll_lag+ice_out_doy_lag+NtoP_lag, correlation = corAR1(form= ~1), data = ts)
+  all_models2 <- dredge(p, extra = c("R^2","adjR^2"), rank = "AICc")
+
+  best_model2 <- as.data.frame(subset(all_models2, delta == 0))
+
+  best_fits2 <- best_model2[,colSums(is.na(best_model2))<nrow(best_model2)] %>%
+    summarise_all(funs(mean))
+
+  best_fits2 <- best_fits2 %>% select(-`R^2`, -`adjR^2`, -df, -logLik, -AICc, -delta, -weight)%>%
+    cbind(., sites[s])%>%
+    reshape2::melt(., id.vars = "sites[s]")%>%
+    select(variable)
+
+  drivers2[s,h] <- as.data.frame(cbind(paste(best_fits2$variable,collapse=", ")))
+
 }
 }
 }
 
 drivers <- drivers %>% rename(Amphipoda = `X1`,
+                              Ntoda = `X2`,
+                              Ephemeroptera = `X3`,
+                              Nmorpha = `X4`,
+                              Veneroida = `X5`,
+                              Diptera = `X6`,
+                              Megaloptera = `X7`,
+                              Trichoptera = `X8`,
+                              Basommatophora = `X9`,
+                              Hemiptera = `X10`,
+                              Platy = `X11`,
+                              Coleoptera = `X12`,
+                              Hirudinida = `X13`,
+                              Ntopda = `X14`,
+                              Plecoptera = `X15`,
+                              Acari = `X16`,
+                              Diplostraca = `X17`,
+                              Isopoda = `X18`,
+                              Odonata = `X19`,
+                              Poridera = `X20`)%>%
+  mutate(site_code = as.character(sites))
+
+drivers2 <- drivers2 %>% rename(Amphipoda = `X1`,
                               Ntoda = `X2`,
                               Ephemeroptera = `X3`,
                               Nmorpha = `X4`,
@@ -177,3 +229,16 @@ zoop_map_drivers <- left_join(drivers, mapping_zoop, by = "site_code")
 
 
 
+# species_t = (specties_t-1)+ error + change_temp_t +TN_t + TP_t + chla_t+change_temp_t-1 +TN_t-1- + TP_t-1 + chla_t-1
+#
+# Test the idea of fully aquatic vs.
+#
+# Semi aquatic are more influenced by (t)
+#
+# species_t = (specties_t-1)+ error + change_temp_t +TN_t + TP_t + chla_t
+# species_t = (specties_t-1)+ error + change_temp_t-1 +TN_t-1- + TP_t-1 + chla_t-1
+#
+# AICc rank
+#
+# Fully aquatic we might expect that more influcend by (T-1)
+# species_t = (specties_t-1)+ error + change_temp_t +TN_t + TP_t + chla_t+change_temp_t-1 +TN_t-1- + TP_t-1 + chla_t-1
