@@ -50,190 +50,203 @@ short_codes <- tribble(
 lake_centroids <- full_join(x = lake_centroids, y = short_codes, by = c("NAME"))
 lake_centroids2<-full_join(x = lake_centroids_df2, y = short_codes, by = c("NAME"))
 
-# Map with polygons, ripe for adding hillshades to...if we can find them
-RAP_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = RAP_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.7)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Raptorial Rotifer driver TS by lake")
-
-RAP_polygon_map
-ggsave("./figures/Raptorial_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
-
-
-MICRO_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = MICRO_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Microphageous Rotifer driver TS by Lake")
-
-MICRO_polygon_map
-ggsave("./figures/Microfageous_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
-
-CLAD_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = CLAD_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Cladoceran driver TS by lake")
-
-CLAD_polygon_map
-ggsave("./figures/Cladocerans_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
-
-
-COPE_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = COPE_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Copepod driver TS by lake")
-
-COPE_polygon_map
-ggsave("./figures/Copepods_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
-
-
-### MAPS BY PARK ###
-RAP_park_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = RAP_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.7)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Raptorial Rotifer driver TS by park")
-
-RAP_park_polygon_map
-ggsave("./figures/Raptorial_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
-
-
-MICRO_park_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = MICRO_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Microphageous Rotifer driver TS by park")
-
-MICRO_park_polygon_map
-ggsave("./figures/Micro_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
-
-
-CLAD_park_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = CLAD_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Cladoceran driver TS by park")
-
-CLAD_park_polygon_map
-ggsave("./figures/Cladoceran_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
-
-
-COPE_park_polygon_map <- ggplot() +
-  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
-  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
-  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
-  ggrepel::geom_text_repel(color="white",
-                           data = lake_centroids,
-                           aes(geometry = Shape, label = short_code),
-                           stat = "sf_coordinates",
-                           min.segment.length = 0) +
-  geom_point(data = COPE_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
-  theme_bw() +
-  theme(panel.background = element_rect(fill = "steelblue1"),
-        panel.grid = element_blank()) +
-  scale_fill_manual(values = c("grey70", "grey40")) +
-  ylab("Latitude") +
-  xlab("Longitude")+
-  labs(title = "Copepod driver TS by park")
-
-COPE_park_polygon_map
-ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
+# # Map with polygons, ripe for adding hillshades to...if we can find them
+# RAP_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = RAP_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.7)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Raptorial Rotifer driver TS by lake")
+#
+# RAP_polygon_map
+# ggsave("./figures/Raptorial_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
+#
+#
+# MICRO_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = MICRO_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Microphageous Rotifer driver TS by Lake")
+#
+# MICRO_polygon_map
+# ggsave("./figures/Microfageous_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
+#
+# CLAD_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = CLAD_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Cladoceran driver TS by lake")
+#
+# CLAD_polygon_map
+# ggsave("./figures/Cladocerans_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
+#
+#
+# COPE_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = COPE_drivers, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Copepod driver TS by lake")
+#
+# COPE_polygon_map
+# ggsave("./figures/Copepods_map_ts_by_lake.jpg", width = 10, height = 6, units = "in")
+#
+#
+# ### MAPS BY PARK ###
+# RAP_park_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = RAP_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.7)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Raptorial Rotifer driver TS by park")
+#
+# RAP_park_polygon_map
+# ggsave("./figures/Raptorial_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
+#
+#
+# MICRO_park_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = MICRO_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Microphageous Rotifer driver TS by park")
+#
+# MICRO_park_polygon_map
+# ggsave("./figures/Micro_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
+#
+#
+# CLAD_park_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = CLAD_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Cladoceran driver TS by park")
+#
+# CLAD_park_polygon_map
+# ggsave("./figures/Cladoceran_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
+#
+#
+# COPE_park_polygon_map <- ggplot() +
+#   geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+#   geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+#   coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+#   ggrepel::geom_text_repel(color="white",
+#                            data = lake_centroids,
+#                            aes(geometry = Shape, label = short_code),
+#                            stat = "sf_coordinates",
+#                            min.segment.length = 0) +
+#   geom_point(data = COPE_drivers_park, aes(lon, lat, color = Drivers), inherit.aes = F, size = 1.5)+
+#   theme_bw() +
+#   theme(panel.background = element_rect(fill = "steelblue1"),
+#         panel.grid = element_blank()) +
+#   scale_fill_manual(values = c("grey70", "grey40")) +
+#   ylab("Latitude") +
+#   xlab("Longitude")+
+#   labs(title = "Copepod driver TS by park")
+#
+# COPE_park_polygon_map
+# ggsave("./figures/Copepod_map_ts_by_park.jpg", width = 10, height = 6, units = "in")
 
 map_macro_drivers <- map_drivers %>% select(-Elevation_m,
                                             -Depth_max, -fish, -solar_jas) %>%
   melt(., id.vars = c("lon", "lat", "site_code", "park_code"))
 
-ggplot(map_macro_drivers, aes(x = variable, group = value, fill = value)) +
+map_macro_drivers2 <- map_drivers2 %>% select(-Elevation_m,
+                                            -Depth_max, -fish, -solar_jas) %>%
+  melt(., id.vars = c("lon", "lat", "site_code", "park_code"))
+
+library(plotly)
+p <- ggplot(map_macro_drivers, aes(x = variable, group = value, fill = value)) +
   geom_bar(stat = "count") +
   scale_fill_viridis(discrete = T)+
   facet_wrap(~site_code)
+ggplotly(p)
+
+library(plotly)
+p <- ggplot(map_macro_drivers2, aes(x = variable, group = value, fill = value)) +
+  geom_bar(stat = "count") +
+  scale_fill_viridis(discrete = T)+
+  facet_wrap(~site_code)
+ggplotly(p)
 
 # Map with polygons, ripe for adding hillshades to...if we can find them
 macro_polygon_map <- ggplot() +
@@ -258,11 +271,39 @@ macro_polygon_map
 ggsave("./figures/macro_map_AR_by_park.jpg", width = 20, height = 25, units = "in")
 
 
+macro_polygon_map <- ggplot() +
+  geom_sf(data = world, aes(fill = NAME), color = "black", inherit.aes = F) +
+  geom_sf(data = lake_centroids, inherit.aes = FALSE) +
+  coord_sf(xlim = c(-124, -120), ylim = c(46.5, 49)) +
+  ggrepel::geom_text_repel(color="white",
+                           data = lake_centroids,
+                           aes(geometry = Shape, label = short_code),
+                           stat = "sf_coordinates",
+                           min.segment.length = 0) +
+  geom_point(data = map_macro_drivers2, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  theme_bw() +
+  theme(panel.background = element_rect(fill = "steelblue1"),
+        panel.grid = element_blank(),
+        axis.text = element_text(size = 15)) +
+  scale_fill_manual(values = c("grey70", "grey40")) +
+  ylab("Latitude") +
+  xlab("Longitude")+
+  facet_wrap(~variable)
+macro_polygon_map
+
 map_zoop_drivers <- zoop_map_drivers %>% select(-Depth_max, -fish, -solar_jas) %>%
   melt(., id.vars = c("lon", "lat", "site_code", "park_code", "Elevation_m"))
 
-library(plotly)
+map_zoop_drivers2 <- zoop_map_drivers2 %>% select(-Depth_max, -fish, -solar_jas) %>%
+  melt(., id.vars = c("lon", "lat", "site_code", "park_code", "Elevation_m"))
+
 p <- ggplot(map_zoop_drivers, aes(x = variable, group = value, fill = value)) +
+  geom_bar(stat = "count") +
+  scale_fill_viridis(discrete = T)+
+  facet_wrap(~site_code)
+ggplotly(p)
+
+p <- ggplot(map_zoop_drivers2, aes(x = variable, group = value, fill = value)) +
   geom_bar(stat = "count") +
   scale_fill_viridis(discrete = T)+
   facet_wrap(~site_code)
@@ -278,7 +319,7 @@ zoop_polygon_map <- ggplot() +
                            aes(geometry = Shape, label = short_code),
                            stat = "sf_coordinates",
                            min.segment.length = 0) +
-  geom_point(data = map_zoop_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  geom_point(data = map_zoop_drivers2, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
   theme_bw() +
   theme(panel.background = element_rect(fill = "steelblue1"),
         panel.grid = element_blank(),
