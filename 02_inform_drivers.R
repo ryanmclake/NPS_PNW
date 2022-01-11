@@ -3,7 +3,7 @@ set.seed(71)
 
 ### Perform an RDA on the Zooplankton
 zoop_cap <- capscale(formula = select(env_zoop_data, CLAD:RAP) ~
-                       stability + Chlorophyll + ice_out_doy + Elevation_m +
+                       stability + Chlorophyll + ice_free_days + Elevation_m +
                        Ca + solar_jas + DOC + lake_temp +`Total N` +
                        `Total P` + Depth_max + fish, data = env_zoop_data, distance = "bray")
 
@@ -27,7 +27,7 @@ ggsave("./figures/CAPSCALE_model_output.jpg", width = 10, height = 10, units = "
 
 ### Perform an RDA on the Macro invertebrates
 macro_cap <- capscale(formula = select(macro_join, Acari:Veneroida) ~
-                       stability + Chlorophyll + ice_out_doy + Elevation_m +
+                       stability + Chlorophyll + ice_free_days + Elevation_m +
                        Ca + solar_jas + DOC + lake_temp +`Total N` +
                        `Total P` + Depth_max + fish, data = macro_join, distance = "bray")
 
@@ -54,7 +54,7 @@ ggsave("./figures/CAPSCALE_model_output_macros.jpg", width = 10, height = 10, un
 ##############################################################
 
 Y <- env_zoop_data %>% select(CLAD:RAP)
-X <- env_zoop_data %>% select(lake_temp,solar_jas,stability,Elevation_m,ice_out_doy,Depth_max)
+X <- env_zoop_data %>% select(lake_temp,solar_jas,stability,Elevation_m,ice_free_days,Depth_max)
 
 cc_results <- cancor(X,Y) # that is it
 
