@@ -258,7 +258,7 @@ macro_polygon_map <- ggplot() +
                            aes(geometry = Shape, label = short_code),
                            stat = "sf_coordinates",
                            min.segment.length = 0) +
-  geom_point(data = map_macro_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  geom_point(data = map_macro_drivers, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 3)+
   theme_bw() +
   theme(panel.background = element_rect(fill = "steelblue1"),
         panel.grid = element_blank(),
@@ -280,7 +280,7 @@ macro_polygon_map <- ggplot() +
                            aes(geometry = Shape, label = short_code),
                            stat = "sf_coordinates",
                            min.segment.length = 0) +
-  geom_point(data = map_macro_drivers2, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 1.7)+
+  geom_point(data = map_macro_drivers2, aes(lon, lat, group = variable, color = value), inherit.aes = F, size = 3)+
   theme_bw() +
   theme(panel.background = element_rect(fill = "steelblue1"),
         panel.grid = element_blank(),
