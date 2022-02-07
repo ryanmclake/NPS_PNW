@@ -97,7 +97,7 @@ zoop <- bind_rows(zoop_no_rotifers, rot_wFFG)%>%
 env_dat_all <- readRDS(file = "./data/bigjoin.rds")
 env_dat_yr <- env_dat_all %>%
   filter(variable %in% c("Ca", "Chlorophyll", "DOC","Total N","Total P",
-                         "BotTemp","MidTemp","SurfTemp", "ice_free_days",
+                         "BotTemp","MidTemp","SurfTemp", "ice_out_doy",
                          "BRK_ever","CCT_ever","RBT_ever","TSS_ever","WCT_ever")) %>%
   unique() %>%
   select(park_code, Lake, site_code, event_year, variable, value, solar_jas, Elevation_m, Depth_max, lon, lat)%>%
@@ -130,19 +130,28 @@ env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
-  mutate_at(vars(Ca, Chlorophyll, DOC, ice_free_days,`Total N`,
-                 `Total P`,lake_temp,stability),
+  mutate_at(vars(Ca, Chlorophyll, DOC,`Total N`, ice_out_doy,lake_temp,
+                 `Total P`,stability),
             funs((log10(.+1))))%>%
   mutate_at(vars(-site_code, -park_code, -event_year, -delta_temp),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
   ungroup(.)%>%
-  filter(RAP >= 0)
+  filter(RAP >= 0)%>%
+  filter(stability>0)
 
-# ggplot(env_zoop_data, aes(ice_free_days, lake_temp, color = park_code, fill = park_code))+
-#   geom_point(pch = 21, size = 2.5, alpha = 0.6)+
-#   geom_smooth(method = "lm")+
-#   ylab("Normalized Lake Temp (Log + 0.1)")+
-#   ylab("Normalized Ice Free Days (Log + 0.1)")
+ggplot(env_zoop_data, aes(ice_out_doy, lake_temp, color = park_code, fill = park_code))+
+  geom_point(pch = 21, size = 2.5, alpha = 0.6)+
+  geom_smooth(method = "lm")+
+  ylab("Lake Temperature (C)")+
+  xlab("Ice Out DOY")+
+  theme_classic()
+
+ggplot(env_zoop_data, aes(as.numeric(event_year), lake_temp, color = park_code, fill = park_code))+
+  geom_point(pch = 21, size = 2.5, alpha = 0.6)+
+  geom_smooth(method = "lm")+
+  ylab("Lake Temperature (C)")+
+  xlab("Year")+
+  theme_classic()
 
 viz_dat <- vis_dat(env_zoop_data)
 viz_dat
@@ -150,7 +159,6 @@ ggsave("./figures/MISSING_DATA_CHECK.jpg", width = 10, height = 8, units = "in")
 
 mapping_zoop <- env_zoop_data %>%
   select(park_code, site_code, lon, lat, Elevation_m, Depth_max, fish, solar_jas)
-
 
 
 macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_code","event_year"))%>%

@@ -3,9 +3,9 @@ set.seed(71)
 
 ### Perform an RDA on the Zooplankton
 zoop_cap <- capscale(formula = select(env_zoop_data, CLAD:RAP) ~
-                       stability + Chlorophyll + ice_free_days + Elevation_m +
+                       Chlorophyll + Elevation_m +
                        Ca + solar_jas + DOC + lake_temp +`Total N` +
-                       `Total P` + Depth_max + fish, data = env_zoop_data, distance = "bray")
+                       `Total P` + fish, data = env_zoop_data, distance = "bray")
 
 zoop_null <- capscale(formula = select(env_zoop_data, CLAD:RAP) ~ 1,
                       data = env_zoop_data, distance = "bray")
@@ -17,7 +17,7 @@ model_site_points <- bind_cols(data.frame(scores(zoop_cap)$sites),env_zoop_data)
 
 all_data_model <- autoplot(zoop_cap, layers = c("biplot", "species")) +
   geom_point(data = model_site_points,
-             aes(x = CAP1, y = CAP2, color = as.character(park_code), alpha = 0.5), size = 2.5)+
+             aes(x = CAP1, y = CAP2, color = as.character(park_code), alpha = 0.5), size = 4)+
   theme_classic()
 
 all_data_model
@@ -27,9 +27,9 @@ ggsave("./figures/CAPSCALE_model_output.jpg", width = 10, height = 10, units = "
 
 ### Perform an RDA on the Macro invertebrates
 macro_cap <- capscale(formula = select(macro_join, Acari:Veneroida) ~
-                       stability + Chlorophyll + ice_free_days + Elevation_m +
-                       Ca + solar_jas + DOC + lake_temp +`Total N` +
-                       `Total P` + Depth_max + fish, data = macro_join, distance = "bray")
+                        Chlorophyll + Elevation_m +
+                        Ca + solar_jas + DOC + lake_temp +`Total N` +
+                        `Total P` + fish, data = macro_join, distance = "bray")
 
 macro_null <- capscale(formula = select(macro_join, Acari:Veneroida) ~ 1,
                       data = macro_join, distance = "bray")
@@ -43,10 +43,12 @@ all_data_model <- autoplot(macro_cap, layers = c("biplot", "species")) +
   geom_point(data = model_site_points,
              aes(x = CAP1, y = CAP2, color = as.character(park_code), alpha = 0.5), size = 2.5)+
   theme_classic()+
-  labs(title = "Aquatic Macroinvertebrate RDA by Order")
+  labs(title = "Aquatic Macroinvertebrate RDA by Taxon")
 
 all_data_model
 ggsave("./figures/CAPSCALE_model_output_macros.jpg", width = 10, height = 10, units = "in")
+
+
 
 
 ##############################################################
@@ -54,7 +56,7 @@ ggsave("./figures/CAPSCALE_model_output_macros.jpg", width = 10, height = 10, un
 ##############################################################
 
 Y <- env_zoop_data %>% select(CLAD:RAP)
-X <- env_zoop_data %>% select(lake_temp,solar_jas,stability,Elevation_m,ice_free_days,Depth_max)
+X <- env_zoop_data %>% select(lake_temp,solar_jas,stability,Elevation_m,ice_out_doy,Depth_max)
 
 cc_results <- cancor(X,Y) # that is it
 

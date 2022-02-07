@@ -15,12 +15,12 @@ for(s in 1:length(sites)){
 
   site_ts <- cca_df_ts %>%
     filter(park_code == sites[s])%>%
-    select(CLAD,CLAD_lag,lake_temp,stability,ice_out_doy,`Total P`,`Total N`,Ca)%>%
+    select(CLAD,CLAD_lag,lake_temp,stability,ice_free_days,`Total P`,`Total N`,Ca)%>%
     rename(TP = `Total P`,
            TN = `Total N`)
 
   all <- glm(CLAD ~ CLAD_lag+
-               lake_temp+stability+ice_out_doy+
+               lake_temp+stability+ice_free_days+
                TN+TP+Ca,
              na.action = "na.fail",
              data = site_ts)
@@ -86,12 +86,12 @@ for(s in 1:length(sites)){
 
   site_ts <- cca_df_ts %>%
     filter(park_code == sites[s])%>%
-    select(COPE,COPE_lag,lake_temp,stability,ice_out_doy,`Total P`,`Total N`,Ca)%>%
+    select(COPE,COPE_lag,lake_temp,stability,ice_free_days,`Total P`,`Total N`,Ca)%>%
     rename(TP = `Total P`,
            TN = `Total N`)
 
   all <- glm(COPE ~ COPE_lag+
-               lake_temp+stability+ice_out_doy+
+               lake_temp+stability+ice_free_days+
                TN+TP+Ca,
              na.action = "na.fail",
              data = site_ts)
@@ -156,12 +156,12 @@ for(s in 1:length(sites)){
 
   site_ts <- cca_df_ts %>%
     filter(park_code == sites[s])%>%
-    select(MICRO,MICRO_lag,lake_temp,stability,ice_out_doy,`Total P`,`Total N`,Ca)%>%
+    select(MICRO,MICRO_lag,lake_temp,stability,ice_free_days,`Total P`,`Total N`,Ca)%>%
     rename(TP = `Total P`,
            TN = `Total N`)
 
   all <- glm(MICRO ~ MICRO_lag+
-               lake_temp+stability+ice_out_doy+
+               lake_temp+stability+ice_free_days+
                TN+TP+Ca,
              na.action = "na.fail",
              data = site_ts)
@@ -226,12 +226,12 @@ for(s in 1:length(sites)){
 
   site_ts <- cca_df_ts %>%
     filter(park_code == sites[s])%>%
-    select(RAP,RAP_lag,lake_temp,stability,ice_out_doy,`Total P`,`Total N`,Ca)%>%
+    select(RAP,RAP_lag,lake_temp,stability,ice_free_days,`Total P`,`Total N`,Ca)%>%
     rename(TP = `Total P`,
            TN = `Total N`)
 
   all <- glm(RAP ~ RAP_lag+
-               lake_temp+stability+ice_out_doy+
+               lake_temp+stability+ice_free_days+
                TN+TP+Ca,
              na.action = "na.fail",
              data = site_ts)
