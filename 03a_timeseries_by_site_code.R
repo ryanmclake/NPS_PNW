@@ -1,28 +1,189 @@
-macro_join_ts <- macro_join %>%
-  group_by(site_code)%>%
-  mutate(Amphipoda_lag = lag(Amphipoda),
-         Ntoda_lag = lag(Ntoda),
-         Ephemeroptera_lag = lag(Ephemeroptera),
-         Nmorpha_lag = lag(Nmorpha),
-         Veneroida_lag = lag(Veneroida),
-         Diptera_lag = lag(Diptera),
-         Megaloptera_lag = lag(Megaloptera),
-         Trichoptera_lag = lag(Trichoptera),
-         Basommatophora_lag = lag(Basommatophora),
-         Hemiptera_lag = lag(Hemiptera),
-         Platy_lag = lag(Platy),
-         Coleoptera_lag = lag(Coleoptera),
-         Hirudinida_lag = lag(Hirudinida),
-         Ntopda_lag = lag(Ntopda),
-         Plecoptera_lag = lag(Plecoptera),
-         Acari_lag = lag(Acari),
-         Diplostraca_lag = lag(Diplostraca),
-         Isopoda_lag = lag(Isopoda),
-         Odonata_lag = lag(Odonata),
-         Poridera_lag = lag(Poridera))%>%
-  mutate_at(vars(-site_code, -park_code, -event_year),
-            funs(imputeTS::na_interpolation(., option = "spline")))
-#
+fully_ts_MORA <- fully_aquatic %>%
+  select(-variable, -site_code)%>%
+  arrange(park_code, event_year)%>%
+  group_by(park_code, event_year)%>%
+  summarize_all(funs(mean), na.rm = F)%>%
+  mutate(lag_value = as.numeric(lag(value)))%>%
+  arrange(park_code, event_year)%>%
+  ungroup(.)%>%
+  select(-site_code)%>%
+  mutate_at(vars(-park_code, -event_year),
+            funs(imputeTS::na_interpolation(., option = "spline")))%>%
+  filter(park_code == "MORA")%>%
+  select(event_year, park_code, value, lag_value, lake_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+  rename(TP = `Total P`,
+         TN = `Total N`)%>%
+  mutate(NtoP = TN/TP)%>%
+  select(-TP, -TN)%>%
+  mutate(lake_temp_lag = lag(lake_temp),
+         Ca_lag = lag(Ca),
+         Chlorophyll_lag = lag(Chlorophyll),
+         NtoP_lag = lag(NtoP))%>%
+  mutate_at(vars(-park_code),funs(imputeTS::na_interpolation(., option = "spline")))
+
+
+
+  t <- glm(value~lag_value+lake_temp+Ca+NtoP, data = fully_ts_MORA, na.action = "na.fail")
+
+  all_models <- dredge(t, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  fully_aic_t_MORA <- best_model %>% select(AICc)%>% mutate(park_code = "MORA")
+  ### best predicted by AR term and temerature
+
+
+  t_1 <- glm(value~lag_value+lake_temp_lag+Ca+NtoP, data = fully_ts_MORA, na.action = "na.fail")
+
+  all_models <- dredge(t_1, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  fully_aic_t_1_MORA <- best_model %>% select(AICc)%>% mutate(park_code = "MORA")
+
+
+
+  fully_ts_NOCA <- fully_aquatic %>%
+    select(-variable, -site_code)%>%
+    arrange(park_code, event_year)%>%
+    group_by(park_code, event_year)%>%
+    summarize_all(funs(mean), na.rm = F)%>%
+    mutate(lag_value = as.numeric(lag(value)))%>%
+    arrange(park_code, event_year)%>%
+    ungroup(.)%>%
+    select(-site_code)%>%
+    mutate_at(vars(-park_code, -event_year),
+              funs(imputeTS::na_interpolation(., option = "spline")))%>%
+    filter(park_code == "NOCA")%>%
+    select(event_year, park_code, value, lag_value, lake_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+    rename(TP = `Total P`,
+           TN = `Total N`)%>%
+    mutate(NtoP = TN/TP)%>%
+    select(-TP, -TN)%>%
+    mutate(lake_temp_lag = lag(lake_temp),
+           Ca_lag = lag(Ca),
+           Chlorophyll_lag = lag(Chlorophyll),
+           NtoP_lag = lag(NtoP))%>%
+    mutate_at(vars(-park_code),funs(imputeTS::na_interpolation(., option = "spline")))
+
+
+
+  t <- glm(value~lag_value+lake_temp+Ca+NtoP, data = fully_ts_NOCA, na.action = "na.fail")
+
+  all_models <- dredge(t, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  fully_aic_t_NOCA <- best_model %>% select(AICc)%>% mutate(park_code = "NOCA")
+  ### best predicted by AR term and temperature
+
+
+  t_1 <- glm(value~lag_value+lake_temp_lag+Ca+NtoP, data = fully_ts_NOCA, na.action = "na.fail")
+
+  all_models <- dredge(t_1, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  fully_aic_t_1_NOCA <- best_model %>% select(AICc)%>% mutate(park_code = "NOCA")
+
+
+
+
+  semi_ts_MORA <- semi_aquatic %>%
+    select(-variable, -site_code)%>%
+    arrange(park_code, event_year)%>%
+    group_by(park_code, event_year)%>%
+    summarize_all(funs(mean), na.rm = F)%>%
+    mutate(lag_value = as.numeric(lag(value)))%>%
+    arrange(park_code, event_year)%>%
+    ungroup(.)%>%
+    select(-site_code)%>%
+    mutate_at(vars(-park_code, -event_year),
+              funs(imputeTS::na_interpolation(., option = "spline")))%>%
+    filter(park_code == "MORA")%>%
+    select(event_year, park_code, value, lag_value, lake_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+    rename(TP = `Total P`,
+           TN = `Total N`)%>%
+    mutate(NtoP = TN/TP)%>%
+    select(-TP, -TN)%>%
+    mutate(lake_temp_lag = lag(lake_temp),
+           Ca_lag = lag(Ca),
+           Chlorophyll_lag = lag(Chlorophyll),
+           NtoP_lag = lag(NtoP))%>%
+    mutate_at(vars(-park_code),funs(imputeTS::na_interpolation(., option = "spline")))
+
+
+
+  t <- glm(value~lag_value+lake_temp+Ca+NtoP, data = semi_ts_MORA, na.action = "na.fail")
+
+  all_models <- dredge(t, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  semi_aic_t_MORA <- best_model %>% select(AICc)%>% mutate(park_code = "MORA")
+  ### best predicted by AR term and temerature
+
+
+  t_1 <- glm(value~lag_value+lake_temp_lag+Ca+NtoP, data = semi_ts_MORA, na.action = "na.fail")
+
+  all_models <- dredge(t_1, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  semi_aic_t_1_MORA <- best_model %>% select(AICc)%>% mutate(park_code = "MORA")
+
+  ggplot(semi_ts_MORA, aes(event_year, value))+geom_point()
+  ggplot(fully_ts_MORA, aes(event_year, value))+geom_point()
+
+
+  semi_ts_NOCA <- semi_aquatic %>%
+    select(-variable, -site_code)%>%
+    arrange(park_code, event_year)%>%
+    group_by(park_code, event_year)%>%
+    summarize_all(funs(mean), na.rm = F)%>%
+    mutate(lag_value = as.numeric(lag(value)))%>%
+    arrange(park_code, event_year)%>%
+    ungroup(.)%>%
+    select(-site_code)%>%
+    mutate_at(vars(-park_code, -event_year),
+              funs(imputeTS::na_interpolation(., option = "spline")))%>%
+    filter(park_code == "NOCA")%>%
+    select(event_year, park_code, value, lag_value, lake_temp,`Total P`,`Total N`, Ca, Chlorophyll)%>%
+    rename(TP = `Total P`,
+           TN = `Total N`)%>%
+    mutate(NtoP = TN/TP)%>%
+    select(-TP, -TN)%>%
+    mutate(lake_temp_lag = lag(lake_temp),
+           Ca_lag = lag(Ca),
+           Chlorophyll_lag = lag(Chlorophyll),
+           NtoP_lag = lag(NtoP))%>%
+    mutate_at(vars(-park_code),funs(imputeTS::na_interpolation(., option = "spline")))
+
+
+
+  t <- glm(value~lag_value+lake_temp+Ca+NtoP, data = semi_ts_NOCA, na.action = "na.fail")
+
+  all_models <- dredge(t, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  semi_aic_t_NOCA <- best_model %>% select(AICc)%>% mutate(park_code = "NOCA")
+  ### best predicted by AR term and temperature
+
+
+  t_1 <- glm(value~lag_value+lake_temp_lag+Ca+NtoP, data = semi_ts_NOCA, na.action = "na.fail")
+
+  all_models <- dredge(t_1, extra = c("R^2","adjR^2"), fixed = "lag_value", rank = "AICc")
+
+  best_model <- as.data.frame(subset(all_models, delta <= 2))
+
+  semi_aic_t_1_NOCA <- best_model %>% select(AICc)%>% mutate(park_code = "NOCA")
+
+
+
+
+
+  #
 # macro_join_ts_test <- macro_join %>%
 #   group_by(site_code)%>%
 #   mutate(Amphipoda_lag = lag(Amphipoda),
