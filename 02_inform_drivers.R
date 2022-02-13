@@ -1,3 +1,8 @@
+
+rmse = function(m, o){
+  sqrt(mean((m - o)^2))
+}
+
 set.seed(71)
 
 
@@ -24,68 +29,62 @@ ggsave("./figures/CAPSCALE_model_output.jpg", width = 10, height = 10, units = "
 
 
 library(PerformanceAnalytics)
+library(broom.mixed)
 
-chart.Correlation(zoop_fishless[,c(4,5,6,9,10,13,16,17,18,19)], histogram = TRUE, method = "pearson")
-
-CLAD_OLY <- zoop_fishless %>% filter(park_code == "OLYM")%>%
-  group_by(site_code, event_year)%>%
+ZOOP <- zoop_fishless %>%
+  group_by(site_code, event_year, park_code)%>%
   summarize_all(funs(mean), na.rm = F)%>%
   mutate(lag_CLAD = as.numeric(lag(CLAD)),
+         lag_COPE = as.numeric(lag(COPE)),
+         lag_RAP = as.numeric(lag(RAP)),
+         lag_MICRO = as.numeric(lag(MICRO)),
          k = 1.7/secchi_value_m)%>%
   arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
+  ungroup(.)
 
-OLY_CLAD_MODEL <- glm(CLAD~SWE_May_snotel+lag_CLAD, data = CLAD_OLY, na.action = "na.fail")
-summary(OLY_CLAD_MODEL)
-OLY_CLAD_PREDICT <- data.frame(CLAD_OLY$site_code,CLAD_OLY$event_year,
-                              predict(OLY_CLAD_MODEL, se.fit = T),CLAD_OLY$CLAD)
-names(OLY_CLAD_PREDICT) <- c("site_code", "event_year",
-                            "predicted_CLAD", "se_fit", "resid_scale", "observed_CLAD")
-OLY_CLAD_PREDICT$park_code <- "OLYM"
+sites <- c("Allen","Bowan","Milk","Silent","Sunup","Triplet","Blum","Connie","Crazy","East","EasyRidge","Ferry","LaCrosse" )
 
-CLAD_NOCA <- zoop_fishless %>% filter(park_code == "NOCA")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_CLAD = as.numeric(lag(CLAD)),
-         k = 1.7/secchi_value_m)%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
+model_eval_CLAD <- data.frame(matrix(NA, nrow = length(sites),ncol = 5))
+model_predict_CLAD <- list()
 
-NOCA_CLAD_MODEL <- glm(CLAD~SWE_May_snotel+lag_CLAD, data = CLAD_NOCA, na.action = "na.fail")
-summary(NOCA_CLAD_MODEL)
-NOCA_CLAD_PREDICT <- data.frame(CLAD_NOCA$site_code,CLAD_NOCA$event_year,
-                               predict(NOCA_CLAD_MODEL, se.fit = T), CLAD_NOCA$CLAD)
-names(NOCA_CLAD_PREDICT) <- c("site_code", "event_year",
-                             "predicted_CLAD", "se_fit", "resid_scale", "observed_CLAD")
-NOCA_CLAD_PREDICT$park_code <- "NOCA"
+for(s in 1:length(sites)){
 
-# Now make one big DF ###
-mod_pre <- rbind(NOCA_CLAD_PREDICT, OLY_CLAD_PREDICT, deparse.level = 1)
+  CLAD_model_eval <- ZOOP %>% filter(site_code == sites[s]) %>%
+    lme(na.action=na.omit,CLAD ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .) %>%
+    predict(.) %>% as.data.frame(.) %>% mutate(site_code = sites[s])
+  a <- rownames(CLAD_model_eval)
+  event_year <- ZOOP %>% filter(site_code == sites[s]) %>% select(event_year)
+  CLAD_model_eval <- cbind(CLAD_model_eval=CLAD_model_eval, event_year)
+  names(CLAD_model_eval) <- c("abundance", "site_code", "event_year")
 
-### plotting of STATS ###
+  model_predict_CLAD[[s]] <- CLAD_model_eval
 
-a <- ggplot(mod_pre, aes(x = event_year, y = observed_CLAD))+
-  geom_point(aes(x = event_year, y = observed_CLAD, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
-  labs(y = expression(paste("log_10(CLAD Abundance)")), x = "", title = "")+
-  geom_line(aes(x = event_year, y = predicted_CLAD, group = site_code, color = park_code), lwd = 1)+
-  geom_ribbon(aes(ymin = predicted_CLAD - se_fit, ymax = predicted_CLAD + se_fit, group = site_code, fill = park_code), alpha = 0.4)+
-  geom_point(aes(x = event_year, y = predicted_CLAD, group = site_code), size=3, color = "black", pch = 21, bg = "dodgerblue4")+
-  theme_bw()+
-  theme(text = element_text(size=15, color = "black"),
-        axis.text = element_text(size = 15, color = "black"),
-        axis.text.x = element_text(angle = 45))+
-  facet_wrap(~site_code,scales = "free")
+  CLAD_site_summary <- ZOOP %>% filter(site_code == sites[s]) %>%
+    do(glance(lme(na.action=na.omit,CLAD ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .)))%>%
+    as.data.frame() %>% mutate(model=sites[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,model)
 
-a
+  model_eval_CLAD[s,] <- as.data.frame(rbind(CLAD_site_summary))
 
-b <- ggplot(mod_pre, aes(x = predicted_CLAD, y = observed_CLAD, fill = park_code))+
+}
+
+model_predict_CLAD = do.call(rbind, model_predict_CLAD)
+names(model_eval_CLAD) <- c("sigma","logLik","AIC","BIC","site_code")
+
+CLAD_compare <- ZOOP %>% select(event_year, site_code, park_code, CLAD)%>%
+  left_join(., model_predict_CLAD, by = c("event_year", "site_code"))
+
+RMSE <- CLAD_compare%>%
+  group_by(site_code, park_code)%>%
+  summarise(RMSE = rmse(CLAD, abundance))
+
+ggplot(RMSE, aes(park_code, RMSE))+
+  geom_boxplot(aes(fill = park_code))+
+  geom_jitter(aes(color = site_code), size = 3, width = 0.05)
+
+ggplot(CLAD_compare, aes(x = abundance, y = CLAD, fill = park_code))+
   geom_point(size = 3, pch = 21)+
   geom_abline(intercept = 0, slope = 1, lwd = 1)+
-  #geom_smooth(method = lm, se = T)+
+  geom_smooth(method = lm, se = T)+
   theme(text = element_text(size=15, color = "black"),
         axis.text = element_text(size = 15, color = "black"))+
   labs(y = expression(paste("observed CLAD")),
@@ -93,128 +92,57 @@ b <- ggplot(mod_pre, aes(x = predicted_CLAD, y = observed_CLAD, fill = park_code
   ylim(c(0,5))+
   xlim(c(0,5))+
   theme_bw()
-b
 
-
-RAP_OLY <- zoop_fishless %>% filter(park_code == "OLYM")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_RAP = as.numeric(lag(RAP)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-OLY_RAP_MODEL <- glm(RAP~SWE_May_snotel+lag_RAP, data = RAP_OLY, na.action = "na.fail")
-summary(OLY_RAP_MODEL)
-OLY_RAP_PREDICT <- data.frame(RAP_OLY$site_code,RAP_OLY$event_year,
-                               predict(OLY_RAP_MODEL, se.fit = T),RAP_OLY$RAP)
-names(OLY_RAP_PREDICT) <- c("site_code", "event_year",
-                             "predicted_RAP", "se_fit", "resid_scale", "observed_RAP")
-OLY_RAP_PREDICT$park_code <- "OLYM"
-
-RAP_NOCA <- zoop_fishless %>% filter(park_code == "NOCA")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_RAP = as.numeric(lag(RAP)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-
-NOCA_RAP_MODEL <- glm(RAP~SWE_May_snotel+lag_RAP, data = RAP_NOCA, na.action = "na.fail")
-summary(NOCA_RAP_MODEL)
-NOCA_RAP_PREDICT <- data.frame(RAP_NOCA$site_code,RAP_NOCA$event_year,
-                                predict(NOCA_RAP_MODEL, se.fit = T),RAP_NOCA$RAP)
-names(NOCA_RAP_PREDICT) <- c("site_code", "event_year",
-                              "predicted_RAP", "se_fit", "resid_scale", "observed_RAP")
-NOCA_RAP_PREDICT$park_code <- "NOCA"
-
-# Now make one big DF ###
-mod_pre <- rbind(NOCA_RAP_PREDICT, OLY_RAP_PREDICT, deparse.level = 1)
-
-### plotting of STATS ###
-
-a <- ggplot(mod_pre, aes(x = event_year, y = observed_RAP))+
-  geom_point(aes(x = event_year, y = observed_RAP, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
-  labs(y = expression(paste("log_10(RAP Abundance)")), x = "", title = "")+
-  geom_line(aes(x = event_year, y = predicted_RAP, group = site_code), lwd = 1, color = "blue")+
-  geom_ribbon(aes(ymin = predicted_RAP - se_fit, ymax = predicted_RAP + se_fit, group = site_code), fill = "blue", alpha = 0.4)+
-  geom_point(aes(x = event_year, y = predicted_RAP, group = site_code), size=3, color = "black", pch = 21, bg = "dodgerblue4")+
+ggplot(CLAD_compare, aes(x = event_year, y = CLAD))+
+  geom_point(aes(x = event_year, y = CLAD, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
+  labs(y = expression(paste("log_10(CLAD Abundance)")), x = "", title = "CLAD lme models (no fish)")+
+  geom_line(aes(x = event_year, y = abundance, group = site_code, color = park_code), lwd = 1)+
+  geom_point(aes(x = event_year, y = abundance, group = site_code, bg = park_code), size=3, color = "black", pch = 21)+
   theme_bw()+
   theme(text = element_text(size=15, color = "black"),
         axis.text = element_text(size = 15, color = "black"),
         axis.text.x = element_text(angle = 45))+
   facet_wrap(~site_code,scales = "free")
 
-a
 
-b <- ggplot(mod_pre, aes(x = predicted_RAP, y = observed_RAP, fill = site_code))+
-  geom_point(size = 3, pch = 21)+
-  geom_abline(intercept = 0, slope = 1, lwd = 1)+
-  #geom_smooth(method = lm, se = T)+
-  theme(text = element_text(size=15, color = "black"),
-        axis.text = element_text(size = 15, color = "black"))+
-  labs(y = expression(paste("observed RAP")),
-       x = expression(paste("predicted RAP")), title = "")+
-  ylim(c(0,5))+
-  xlim(c(0,5))+
-  theme_bw()
-b
+model_eval_COPE <- data.frame(matrix(NA, nrow = length(sites),ncol = 5))
+model_predict_COPE <- list()
 
+for(s in 1:length(sites)){
 
-COPE_OLY <- zoop_fishless %>% filter(park_code == "OLYM")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_COPE = as.numeric(lag(COPE)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
+  COPE_model_eval <- ZOOP %>% filter(site_code == sites[s]) %>%
+    lme(na.action=na.omit,COPE ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .) %>%
+    predict(.) %>% as.data.frame(.) %>% mutate(site_code = sites[s])
+  a <- rownames(COPE_model_eval)
+  event_year <- ZOOP %>% filter(site_code == sites[s]) %>% select(event_year)
+  COPE_model_eval <- cbind(COPE_model_eval=COPE_model_eval, event_year)
+  names(COPE_model_eval) <- c("abundance", "site_code", "event_year")
 
-OLY_COPE_MODEL <- glm(COPE~SWE_May_snotel+lag_COPE, data = COPE_OLY, na.action = "na.fail")
-summary(OLY_COPE_MODEL)
-OLY_COPE_PREDICT <- data.frame(COPE_OLY$site_code,COPE_OLY$event_year,
-                              predict(OLY_COPE_MODEL, se.fit = T),COPE_OLY$COPE)
-names(OLY_COPE_PREDICT) <- c("site_code", "event_year",
-                            "predicted_COPE", "se_fit", "resid_scale", "observed_COPE")
-OLY_COPE_PREDICT$park_code <- "OLYM"
+  model_predict_COPE[[s]] <- COPE_model_eval
 
-COPE_NOCA <- zoop_fishless %>% filter(park_code == "NOCA")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_COPE = as.numeric(lag(COPE)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-NOCA_COPE_MODEL <- glm(COPE~secchi_value_m+lag_COPE, data = COPE_NOCA, na.action = "na.fail")
-summary(NOCA_COPE_MODEL)
-NOCA_COPE_PREDICT <- data.frame(COPE_NOCA$site_code,COPE_NOCA$event_year,
-                               predict(NOCA_COPE_MODEL, se.fit = T),COPE_NOCA$COPE)
-names(NOCA_COPE_PREDICT) <- c("site_code", "event_year",
-                             "predicted_COPE", "se_fit", "resid_scale", "observed_COPE")
-NOCA_COPE_PREDICT$park_code <- "NOCA"
+  COPE_site_summary <- ZOOP %>% filter(site_code == sites[s]) %>%
+    do(glance(lme(na.action=na.omit,COPE ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .)))%>%
+    as.data.frame() %>% mutate(model=sites[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,model)
 
-# Now make one big DF ###
-mod_pre <- rbind(NOCA_COPE_PREDICT, OLY_COPE_PREDICT, deparse.level = 1)
+  model_eval_COPE[s,] <- as.data.frame(rbind(COPE_site_summary))
 
-### plotting of STATS ###
+}
 
-a <- ggplot(mod_pre, aes(x = event_year, y = observed_COPE))+
-  geom_point(aes(x = event_year, y = observed_COPE, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
-  labs(y = expression(paste("log_10(COPE Abundance)")), x = "", title = "")+
-  geom_line(aes(x = event_year, y = predicted_COPE, group = site_code), lwd = 1, color = "blue")+
-  geom_ribbon(aes(ymin = predicted_COPE - se_fit, ymax = predicted_COPE + se_fit, group = site_code), fill = "blue", alpha = 0.4)+
-  geom_point(aes(x = event_year, y = predicted_COPE, group = site_code), size=3, color = "black", pch = 21, bg = "dodgerblue4")+
-  theme_bw()+
-  theme(text = element_text(size=15, color = "black"),
-        axis.text = element_text(size = 15, color = "black"),
-        axis.text.x = element_text(angle = 45))+
-  facet_wrap(~site_code,scales = "free")
+model_predict_COPE = do.call(rbind, model_predict_COPE)
+names(model_eval_COPE) <- c("sigma","logLik","AIC","BIC","site_code")
 
-a
+COPE_compare <- ZOOP %>% select(event_year, site_code, park_code, COPE)%>%
+  left_join(., model_predict_COPE, by = c("event_year", "site_code"))
 
-b <- ggplot(mod_pre, aes(x = predicted_COPE, y = observed_COPE, fill = site_code))+
+RMSE <- COPE_compare%>%
+  group_by(site_code, park_code)%>%
+  summarise(RMSE = rmse(COPE, abundance))
+
+ggplot(RMSE, aes(park_code, RMSE))+
+  geom_boxplot(aes(fill = park_code))+
+  geom_jitter(aes(color = site_code), size = 3, width = 0.05)
+
+ggplot(COPE_compare, aes(x = abundance, y = COPE, fill = park_code))+
   geom_point(size = 3, pch = 21)+
   geom_abline(intercept = 0, slope = 1, lwd = 1)+
   geom_smooth(method = lm, se = T)+
@@ -222,65 +150,60 @@ b <- ggplot(mod_pre, aes(x = predicted_COPE, y = observed_COPE, fill = site_code
         axis.text = element_text(size = 15, color = "black"))+
   labs(y = expression(paste("observed COPE")),
        x = expression(paste("predicted COPE")), title = "")+
-  ylim(c(1,5))+
-  xlim(c(1,5))+
-  facet_wrap(~site_code)+
+  ylim(c(0,5))+
+  xlim(c(0,5))+
   theme_bw()
-b
 
-MICRO_OLY <- zoop_fishless %>% filter(park_code == "OLYM")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_MICRO = as.numeric(lag(MICRO)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-
-OLY_MICRO_MODEL <- glm(MICRO~lake_temp+lag_MICRO, data = MICRO_OLY, na.action = "na.fail")
-summary(OLY_MICRO_MODEL)
-OLY_MICRO_PREDICT <- data.frame(MICRO_OLY$site_code,MICRO_OLY$event_year,
-                               predict(OLY_MICRO_MODEL, se.fit = T),MICRO_OLY$MICRO)
-names(OLY_MICRO_PREDICT) <- c("site_code", "event_year",
-                             "predicted_MICRO", "se_fit", "resid_scale", "observed_MICRO")
-OLY_MICRO_PREDICT$park_code <- "OLYM"
-
-MICRO_NOCA <- zoop_fishless %>% filter(park_code == "NOCA")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_MICRO = as.numeric(lag(MICRO)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-NOCA_MICRO_MODEL <- glm(MICRO~flush_index_SWE_May_snotel+lag_MICRO, data = MICRO_NOCA, na.action = "na.fail")
-summary(NOCA_MICRO_MODEL)
-NOCA_MICRO_PREDICT <- data.frame(MICRO_NOCA$site_code,MICRO_NOCA$event_year,
-                                predict(NOCA_MICRO_MODEL, se.fit = T),MICRO_NOCA$MICRO)
-names(NOCA_MICRO_PREDICT) <- c("site_code", "event_year",
-                              "predicted_MICRO", "se_fit", "resid_scale", "observed_MICRO")
-NOCA_MICRO_PREDICT$park_code <- "NOCA"
-
-# Now make one big DF ###
-mod_pre <- rbind(NOCA_MICRO_PREDICT, OLY_MICRO_PREDICT, deparse.level = 1)
-
-### plotting of STATS ###
-
-a <- ggplot(mod_pre, aes(x = event_year, y = observed_MICRO))+
-  geom_point(aes(x = event_year, y = observed_MICRO, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
-  labs(y = expression(paste("log_10(MICRO Abundance)")), x = "", title = "")+
-  geom_line(aes(x = event_year, y = predicted_MICRO, group = site_code), lwd = 1, color = "blue")+
-  geom_ribbon(aes(ymin = predicted_MICRO - se_fit, ymax = predicted_MICRO + se_fit, group = site_code), fill = "blue", alpha = 0.4)+
-  geom_point(aes(x = event_year, y = predicted_MICRO, group = site_code), size=3, color = "black", pch = 21, bg = "dodgerblue4")+
+ggplot(COPE_compare, aes(x = event_year, y = COPE))+
+  geom_point(aes(x = event_year, y = COPE, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
+  labs(y = expression(paste("log_10(COPE Abundance)")), x = "", title = "COPE lme models (no fish)")+
+  geom_line(aes(x = event_year, y = abundance, group = site_code, color = park_code), lwd = 1)+
+  geom_point(aes(x = event_year, y = abundance, group = site_code, bg = park_code), size=3, color = "black", pch = 21)+
   theme_bw()+
   theme(text = element_text(size=15, color = "black"),
         axis.text = element_text(size = 15, color = "black"),
         axis.text.x = element_text(angle = 45))+
   facet_wrap(~site_code,scales = "free")
 
-a
 
-b <- ggplot(mod_pre, aes(x = predicted_MICRO, y = observed_MICRO, fill = park_code))+
+model_eval_MICRO <- data.frame(matrix(NA, nrow = length(sites),ncol = 5))
+model_predict_MICRO <- list()
+
+for(s in 1:length(sites)){
+
+  MICRO_model_eval <- ZOOP %>% filter(site_code == sites[s]) %>%
+    lme(na.action=na.omit,MICRO ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .) %>%
+    predict(.) %>% as.data.frame(.) %>% mutate(site_code = sites[s])
+  a <- rownames(MICRO_model_eval)
+  event_year <- ZOOP %>% filter(site_code == sites[s]) %>% select(event_year)
+  MICRO_model_eval <- cbind(MICRO_model_eval=MICRO_model_eval, event_year)
+  names(MICRO_model_eval) <- c("abundance", "site_code", "event_year")
+
+  model_predict_MICRO[[s]] <- MICRO_model_eval
+
+  MICRO_site_summary <- ZOOP %>% filter(site_code == sites[s]) %>%
+    do(glance(lme(na.action=na.omit,MICRO ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .)))%>%
+    as.data.frame() %>% mutate(model=sites[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,model)
+
+  model_eval_MICRO[s,] <- as.data.frame(rbind(MICRO_site_summary))
+
+}
+
+model_predict_MICRO = do.call(rbind, model_predict_MICRO)
+names(model_eval_MICRO) <- c("sigma","logLik","AIC","BIC","site_code")
+
+MICRO_compare <- ZOOP %>% select(event_year, site_code, park_code, MICRO)%>%
+  left_join(., model_predict_MICRO, by = c("event_year", "site_code"))
+
+RMSE <- MICRO_compare%>%
+  group_by(site_code, park_code)%>%
+  summarise(RMSE = rmse(MICRO, abundance))
+
+ggplot(RMSE, aes(park_code, RMSE))+
+  geom_boxplot(aes(fill = park_code))+
+  geom_jitter(aes(color = site_code), size = 3, width = 0.05)
+
+ggplot(MICRO_compare, aes(x = abundance, y = MICRO, fill = park_code))+
   geom_point(size = 3, pch = 21)+
   geom_abline(intercept = 0, slope = 1, lwd = 1)+
   geom_smooth(method = lm, se = T)+
@@ -288,80 +211,82 @@ b <- ggplot(mod_pre, aes(x = predicted_MICRO, y = observed_MICRO, fill = park_co
         axis.text = element_text(size = 15, color = "black"))+
   labs(y = expression(paste("observed MICRO")),
        x = expression(paste("predicted MICRO")), title = "")+
-  ylim(c(1,5))+
-  xlim(c(1,5))+
-  facet_wrap(~site_code)+
+  ylim(c(0,5))+
+  xlim(c(0,5))+
   theme_bw()
-b
 
-
-GR_OLY <- zoop_fishless %>% filter(park_code == "OLYM")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(GR = (RAP+MICRO),
-         lag_GR = as.numeric(lag(GR)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-
-OLY_GR_MODEL <- glm(GR~SWE_May_snotel+lag_GR, data = GR_OLY, na.action = "na.fail")
-summary(OLY_GR_MODEL)
-OLY_GR_PREDICT <- data.frame(GR_OLY$site_code,GR_OLY$event_year,
-                                predict(OLY_GR_MODEL, se.fit = T),GR_OLY$GR)
-names(OLY_GR_PREDICT) <- c("site_code", "event_year",
-                              "predicted_GR", "se_fit", "resid_scale", "observed_GR")
-OLY_GR_PREDICT$park_code <- "OLYM"
-
-GR_NOCA <- zoop_fishless %>% filter(park_code == "NOCA")%>%
-  group_by(site_code, event_year)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(GR = (RAP+MICRO),
-         lag_GR = as.numeric(lag(GR)))%>%
-  arrange(event_year)%>%
-  ungroup(.)%>%
-  select(-park_code)%>%
-  na.omit(.)
-
-NOCA_GR_MODEL <- glm(GR ~ lake_temp + lag_GR, data = GR_NOCA, na.action = "na.fail")
-summary(NOCA_GR_MODEL)
-NOCA_GR_PREDICT <- data.frame(GR_NOCA$site_code,GR_NOCA$event_year,
-                                 predict(NOCA_GR_MODEL, se.fit = T),GR_NOCA$GR)
-names(NOCA_GR_PREDICT) <- c("site_code", "event_year",
-                               "predicted_GR", "se_fit", "resid_scale", "observed_GR")
-NOCA_GR_PREDICT$park_code <- "NOCA"
-
-# Now make one big DF ###
-mod_pre <- rbind(NOCA_GR_PREDICT, OLY_GR_PREDICT, deparse.level = 1)
-
-### plotting of STATS ###
-
-a <- ggplot(mod_pre, aes(x = event_year, y = observed_GR))+
-  geom_point(aes(x = event_year, y = observed_GR, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
-  labs(y = expression(paste("log_10(GR Abundance)")), x = "", title = "")+
-  geom_line(aes(x = event_year, y = predicted_GR, group = site_code, color = park_code), lwd = 1)+
-  geom_ribbon(aes(ymin = predicted_GR - se_fit, ymax = predicted_GR + se_fit, group = site_code, fill = park_code), alpha = 0.4)+
-  geom_point(aes(x = event_year, y = predicted_GR, group = site_code), size=3, color = "black", pch = 21, bg = "dodgerblue4")+
+ggplot(MICRO_compare, aes(x = event_year, y = MICRO))+
+  geom_point(aes(x = event_year, y = MICRO, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
+  labs(y = expression(paste("log_10(MICRO Abundance)")), x = "", title = "MICRO lme models (no fish)")+
+  geom_line(aes(x = event_year, y = abundance, group = site_code, color = park_code), lwd = 1)+
+  geom_point(aes(x = event_year, y = abundance, group = site_code, bg = park_code), size=3, color = "black", pch = 21)+
   theme_bw()+
   theme(text = element_text(size=15, color = "black"),
         axis.text = element_text(size = 15, color = "black"),
         axis.text.x = element_text(angle = 45))+
   facet_wrap(~site_code,scales = "free")
 
-a
 
-b <- ggplot(mod_pre, aes(x = predicted_GR, y = observed_GR, fill = park_code))+
+model_eval_RAP <- data.frame(matrix(NA, nrow = length(sites),ncol = 5))
+model_predict_RAP <- list()
+
+for(s in 1:length(sites)){
+
+  RAP_model_eval <- ZOOP %>% filter(site_code == sites[s]) %>%
+    lme(na.action=na.omit,RAP ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .) %>%
+    predict(.) %>% as.data.frame(.) %>% mutate(site_code = sites[s])
+  a <- rownames(RAP_model_eval)
+  event_year <- ZOOP %>% filter(site_code == sites[s]) %>% select(event_year)
+  RAP_model_eval <- cbind(RAP_model_eval=RAP_model_eval, event_year)
+  names(RAP_model_eval) <- c("abundance", "site_code", "event_year")
+
+  model_predict_RAP[[s]] <- RAP_model_eval
+
+  RAP_site_summary <- ZOOP %>% filter(site_code == sites[s]) %>%
+    do(glance(lme(na.action=na.omit,RAP ~ lake_temp + Ca + Chlorophyll + k, random = ~ 1|park_code, method="ML",data = .)))%>%
+    as.data.frame() %>% mutate(model=sites[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,model)
+
+  model_eval_RAP[s,] <- as.data.frame(rbind(RAP_site_summary))
+
+}
+
+model_predict_RAP = do.call(rbind, model_predict_RAP)
+names(model_eval_RAP) <- c("sigma","logLik","AIC","BIC","site_code")
+
+RAP_compare <- ZOOP %>% select(event_year, site_code, park_code, RAP)%>%
+  left_join(., model_predict_RAP, by = c("event_year", "site_code"))
+
+RMSE <- RAP_compare%>%
+  group_by(site_code, park_code)%>%
+  summarise(RMSE = rmse(RAP, abundance))
+
+ggplot(RMSE, aes(park_code, RMSE))+
+  geom_boxplot(aes(fill = park_code))+
+  geom_jitter(aes(color = site_code), size = 3, width = 0.05)
+
+ggplot(RAP_compare, aes(x = abundance, y = RAP, fill = park_code))+
   geom_point(size = 3, pch = 21)+
   geom_abline(intercept = 0, slope = 1, lwd = 1)+
-  #geom_smooth(method = lm, se = T)+
+  geom_smooth(method = lm, se = T)+
   theme(text = element_text(size=15, color = "black"),
         axis.text = element_text(size = 15, color = "black"))+
-  labs(y = expression(paste("observed GR")),
-       x = expression(paste("predicted GR")), title = "")+
+  labs(y = expression(paste("observed RAP")),
+       x = expression(paste("predicted RAP")), title = "")+
   ylim(c(0,5))+
   xlim(c(0,5))+
   theme_bw()
-b
+
+ggplot(RAP_compare, aes(x = event_year, y = RAP))+
+  geom_point(aes(x = event_year, y = RAP, group = site_code), size=3, color = "black", pch = 21, bg = "grey70")+
+  labs(y = expression(paste("log_10(RAP Abundance)")), x = "", title = "RAP lme models (no fish)")+
+  geom_line(aes(x = event_year, y = abundance, group = site_code, color = park_code), lwd = 1)+
+  geom_point(aes(x = event_year, y = abundance, group = site_code, bg = park_code), size=3, color = "black", pch = 21)+
+  theme_bw()+
+  theme(text = element_text(size=15, color = "black"),
+        axis.text = element_text(size = 15, color = "black"),
+        axis.text.x = element_text(angle = 45))+
+  facet_wrap(~site_code,scales = "free")
+
 
 ### Perform an RDA on the Macro invertebrates
 macro_cap <- capscale(formula = select(macro_fishless, Annelida:Porifera) ~

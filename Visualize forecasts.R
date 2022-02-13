@@ -1,14 +1,16 @@
-RMSE = function(m, o){
+rmse = function(m, o){
   sqrt(mean((m - o)^2))
 }
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# DATA PATH NEEDS TO BE CHANGED to ./forecast_output/
+# DATA PATH NEEDS TO BE CHANGED to ./data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 data_path <- "./data"
 
-forecast_type <- c("o", "f","o", "f","o", "f","o", "f","o", "f","o", "f")
-forecast_number <- c("1", "1","2", "2","3", "3","4", "4","5", "5","6", "6")
+forecast_type <- c("o", "f","o", "f","o", "f","o", "f","o", "f","o", "f",
+                   "o", "f","o", "f","o", "f","o", "f","o", "f")
+forecast_number <- c("1", "1","2", "2","3", "3","4", "4","5", "5","6", "6",
+                     "7", "7","8", "8","9", "9","10", "10","11", "11")
 clad_noca_forecasts <- list.files(data_path, pattern = "CLAD_NOCA_forecast_wDA_")%>%
   map(~ readRDS(file.path(data_path, .))) %>%
   data.table::rbindlist(fill = T)
@@ -107,50 +109,7 @@ c <- all_partitioned_melt%>%
         legend.title = element_blank(),
         title = element_text(size = 15), legend.position = "top",
         legend.text = element_text(size = 10, color = "black"))
-
-d <- all_partitioned_melt%>%
-  group_by(variable)%>% filter(day_in_future == 2) %>%
-  ggplot(., aes(x = forecast_date, y = value, group=variable, fill = variable))+
-  geom_area(aes(fill = variable))+
-  scale_fill_manual(values = c("#E69F00", "#D55E00", "#CC79A7", "#56B4E9"))+
-  theme_bw()+
-  labs(title = "B: Partitioned uncertainty of each two-week forecast")+
-  ylab("Proportion of total variance")+
-  xlab("")+
-  theme(axis.text=element_text(size=15, color = "black"),
-        axis.title=element_text(size=15, color = "black"),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        legend.title = element_blank(),
-        title = element_text(size = 15), legend.position = "top",
-        legend.text = element_text(size = 10, color = "black"))
-
-e <- all_partitioned_melt %>% filter(day_in_future > 0) %>%
-  ggplot(., aes(x = variable, y = value, group=variable, fill = variable))+
-  geom_boxplot(aes(fill = variable))+
-  scale_fill_manual(values = c("#E69F00", "#D55E00", "#CC79A7", "#56B4E9"))+
-  theme_bw()+
-  labs(title = "C: One-week and two-week uncertainty across 2019 forecast season")+
-  ylab("Proportion of total variance")+
-  xlab("Source of uncertainty")+
-  theme(axis.text=element_text(size=15, color = "black"),
-        axis.title=element_text(size=15, color = "black"),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        legend.title = element_blank(),
-        title = element_text(size = 15), legend.position = "none",
-        legend.text = element_text(size = 10, color = "black"))
-
-
-partition = (c+d)/e
-partition
-
-
-
+c
 
 trap_all_SWE_parm <- list.files(data_path, pattern = "SWE_PARM")%>%
   map(~ readRDS(file.path(data_path, .))) %>%
@@ -182,7 +141,7 @@ all_partitioned_melt <- all_partitioned%>%
   melt(., id = c("event_year","forecast_type","forecast_number"))
 
 
-c <- all_partitioned_melt%>%
+d <- all_partitioned_melt%>%
   group_by(variable)%>%
   ggplot(., aes(x = event_year, y = value, group=variable, fill = variable))+
   geom_area(aes(fill = variable))+
@@ -200,3 +159,4 @@ c <- all_partitioned_melt%>%
         legend.title = element_blank(),
         title = element_text(size = 15), legend.position = "top",
         legend.text = element_text(size = 10, color = "black"))
+d
