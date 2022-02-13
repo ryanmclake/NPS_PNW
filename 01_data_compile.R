@@ -11,16 +11,16 @@ macro_lookup <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx"
 
 full_macro <- inner_join(x = macro_counts, y = macro_lookup, by = c("Taxon"))%>%
   filter(!is.na(Count)) %>%
-  group_by(Park, Site_ID, Year, Order) %>%
+  group_by(Park, Site_ID, Year, Phylum) %>%
   summarise(sum_phylum_count = sum(Count))%>%
   rename(park_code = Park,
          site_code = Site_ID,
          event_year = Year)%>%
-  melt(., id.vars = c("park_code","site_code","event_year","Order"))%>%
+  melt(., id.vars = c("park_code","site_code","event_year","Phylum"))%>%
   mutate(across(everything(), gsub, pattern = "_", replacement = ""))%>%
   mutate(event_year = as.character(event_year),
          value = as.numeric(value))%>%
-  spread(., key = Order, value = value)
+  spread(., key = Phylum, value = value)
 
 full_macro[is.na(full_macro)] <- 0
 
@@ -96,11 +96,11 @@ zoop <- bind_rows(zoop_no_rotifers, rot_wFFG)%>%
 
 env_dat_all <- readRDS(file = "./data/bigjoin.rds")
 env_dat_yr <- env_dat_all %>%
-  filter(variable %in% c("Ca", "Chlorophyll", "DOC","Total N","Total P",
-                         "BotTemp","MidTemp","SurfTemp", "ice_out_doy",
-                         "BRK_ever","CCT_ever","RBT_ever","TSS_ever","WCT_ever")) %>%
+  filter(variable %in% c("Ca", "Chlorophyll","TDS","DOC", "SpCond_top2m", "Total N","Total P",
+                         "BotTemp","MidTemp","SurfTemp", "ice_out_doy","SWE_May_snotel",
+                         "BRK_ever","CCT_ever","RBT_ever","TSS_ever","WCT_ever","secchi_value_m")) %>%
   unique() %>%
-  select(park_code, Lake, site_code, event_year, variable, value, solar_jas, Elevation_m, Depth_max, lon, lat)%>%
+  select(park_code, Lake, site_code, event_year, variable, value, solar_jas, Elevation_m,flush_index_SWE_May_snotel, Depth_max,SWE_May_snotel, lon, lat)%>%
   spread(key = variable, value = value)%>%
   mutate(event_year = as.character(event_year))%>%
   select(-site_code)%>%
@@ -130,36 +130,21 @@ env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
-  mutate_at(vars(Ca, Chlorophyll, DOC,`Total N`, ice_out_doy,lake_temp,
+  mutate_at(vars(Ca, Chlorophyll, DOC, TDS, SpCond_top2m,`Total N`, ice_out_doy,lake_temp,
                  `Total P`,stability),
             funs((log10(.+1))))%>%
-  mutate_at(vars(-site_code, -park_code, -event_year, -delta_temp),
+  mutate_at(vars(-site_code, -park_code,-Elevation_m,-solar_jas, -event_year, -delta_temp),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
   ungroup(.)%>%
   filter(RAP >= 0)%>%
   filter(stability>0)
 
-ggplot(env_zoop_data, aes(ice_out_doy, lake_temp, color = park_code, fill = park_code))+
-  geom_point(pch = 21, size = 2.5, alpha = 0.6)+
-  geom_smooth(method = "lm")+
-  ylab("Lake Temperature (C)")+
-  xlab("Ice Out DOY")+
-  theme_classic()
+zoop_fishless <- env_zoop_data %>% filter(fish ==0)
 
-ggplot(env_zoop_data, aes(as.numeric(event_year), lake_temp, color = park_code, fill = park_code))+
-  geom_point(pch = 21, size = 2.5, alpha = 0.6)+
-  geom_smooth(method = "lm")+
-  ylab("Lake Temperature (C)")+
-  xlab("Year")+
-  theme_classic()
-
-viz_dat <- vis_dat(env_zoop_data)
-viz_dat
-ggsave("./figures/MISSING_DATA_CHECK.jpg", width = 10, height = 8, units = "in")
+zoop_fish <- env_zoop_data %>% filter(fish ==1)
 
 mapping_zoop <- env_zoop_data %>%
   select(park_code, site_code, lon, lat, Elevation_m, Depth_max, fish, solar_jas)
-
 
 macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_code","event_year"))%>%
   select(-variable)%>%
@@ -174,12 +159,14 @@ macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_c
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
   mutate_at(vars(-site_code, -park_code, -event_year),
             funs(imputeTS::na_interpolation(., option = "spline")))%>%
-  mutate_at(vars(-site_code, -park_code, -event_year, -lon, -lat, -DOC, -fish, -delta_temp),
+  mutate_at(vars(-site_code, -park_code, -Elevation_m,-solar_jas, -event_year, -lon, -lat, -DOC, -fish, -delta_temp, -SWE_May_snotel),
             funs((log10(.+1))))%>%
   mutate(DOC = ifelse(DOC<0,0,DOC))%>%
   mutate(DOC = log10(DOC+1))%>%
   ungroup(.)
 
-viz_dat <- vis_dat(macro_join)
-viz_dat
-ggsave("./figures/MISSING_DATA_CHECK_macros.jpg", width = 10, height = 8, units = "in")
+macro_fishless <- macro_join %>% filter(fish == 0) %>%
+  na.omit(.)
+
+macro_fish <- macro_join %>% filter(fish == 1) %>%
+  na.omit(.)

@@ -13,6 +13,13 @@ pacman::p_load(tidyverse,reshape2,zoo,vegan,readxl,lme4,
                reshape2,ggvegan,janitor,MuMIn,kableExtra,
                sf,tigris,ggrepel,osmdata,rgdal,ggmap,corrplot)
 
+if (!"pacman" %in% installed.packages()) install.packages("pacman")
+pacman::p_load(tidyverse, MCMCvis, lubridate, tidybayes,
+               ncdf4, reshape2, zoo, patchwork, hydroGOF, viridis,
+               imputeTS, devtools, scales, forecast, coda, rjags, R2jags,gridExtra)
+
+set.seed(1)
+
 source("./R/functions/ScreePlotFunction.R")
 
 RMSE = function(m, o){
