@@ -184,6 +184,8 @@ zoop_taxa <- c("COPE", "CLAD", "MICRO", "RAP")
 sites <- c("Allen","Bowan","Milk","Silent","Triplet","Sunup","Blum","Connie","Crazy","East","EasyRidge",
            "Ferry","LaCrosse")
 
+RMSE <- list()
+
 for(g in 1:length(sites)){
  for(s in 1:length(zoop_taxa)){
 
@@ -246,20 +248,22 @@ for(g in 1:length(sites)){
               lower_95 = quantile(value, 0.05, na.rm = T),
               var = var(value))
 
-  data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,8)], pred_data_dist, by = "event_year"))
+  data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,8)], pred_data_dist, by = "event_year"))%>%ungroup(.)
 
   ggplot(data_compare)+
-    geom_point(aes(x = event_year, y = value), size=3, color = "black", pch = 21, bg = "grey70")+
+    geom_line(aes(x = event_year, y = mean, group = park_code), lwd = 2)+
+    geom_point(aes(x = event_year, y = value, group = park_code), cex=7, color = "black", pch = 21, bg = "grey70")+
+    geom_point(aes(x = event_year, y = mean, group = park_code), cex = 7, color = "black", fill = "blue", pch = 21)+
     labs(y = expression(paste("log_10(Abundance)")), x = "", title = paste0(sites[g],"_",zoop_taxa[s]))+
-    geom_line(aes(x = event_year, y = mean), lwd = 1)+
-    geom_point(aes(x = event_year, y = mean), size=3, color = "black", fill = "blue", pch = 21)+
     theme_bw()+
     theme(text = element_text(size=15, color = "black"),
           axis.text = element_text(size = 15, color = "black"),
           axis.text.x = element_text(angle = 45, hjust = 1))
 
-  rmse
+  ggsave(paste0(".figures/",sites[g],"_",zoop_taxa[s],".jpg"), width = 4, height = 4, units = "in", dpi = 300)
 
-  saveRDS(site_zoop_parameters, paste0("./output/",sites[g],"_specific_parameters",zoop_taxa[s],".rds"))
+  RMSE[g[s]] <- rmse(data_compare$value, data_compare$mean)
+
+
  }
 }

@@ -5,55 +5,90 @@ rmse = function(m, o){
 # DATA PATH NEEDS TO BE CHANGED to ./data
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-data_path <- "./data"
+data_path <- "./output"
 
-forecast_type <- c("o", "f","o", "f","o", "f","o", "f","o", "f","o", "f",
-                   "o", "f","o", "f","o", "f","o", "f","o", "f")
-forecast_number <- c("1", "1","2", "2","3", "3","4", "4","5", "5","6", "6",
-                     "7", "7","8", "8","9", "9","10", "10","11", "11")
-clad_noca_forecasts <- list.files(data_path, pattern = "CLAD_NOCA_forecast_wDA_")%>%
+
+site_prediction_jags <- list.files(data_path, pattern = "MAIN_MCMC_JAGS_PREDICTION")%>%
   map(~ readRDS(file.path(data_path, .))) %>%
-  data.table::rbindlist(fill = T)
+  data.table::rbindlist(fill = T)%>%
+  na.omit(.)%>%
+  left_join(., env_zoop_data, by = c("site_code","event_year", "park_code", "fish"))
 
-clad_noca_forecasts <- cbind(clad_noca_forecasts, forecast_type, forecast_number)
+evals <- site_prediction_jags %>%
+  group_by(site_code, taxa)%>%
+  summarize(RMSE = rmse(mean, value),
+            var = mean(var))%>%
+  left_join(., env_zoop_data, by = "site_code")
 
-CLAD_NOCA_observed <- CLAD_NOCA %>%
-  select(site_code, event_year, CLAD)%>%
-  group_by(event_year)%>%
-  summarize(mean_CLAD = mean(CLAD),
-            sd_CLAD = sd(CLAD))
+ggplot(evals, aes(taxa, var))+
+  geom_boxplot(aes(fill=park_code))
 
-CLAD_NOCA_all <- CLAD_NOCA %>%
-  select(site_code, event_year, CLAD)
+ggplot(evals, aes(var, RMSE, group = taxa))+
+  geom_point(aes(color = park_code))+
+  facet_wrap(~taxa)
 
-CLAD_NOCA_forecasts_wDA <- clad_noca_forecasts %>%
-  ggplot(., aes(x = event_year, y = mean, group = forecast_number)) +
-  geom_point(data = CLAD_NOCA_all, aes(x = event_year, y = CLAD, fill = "midnightblue", color = "black"), inherit.aes = F, cex = 1, alpha = 1)+
-  geom_ribbon(aes(ymin = lower_95, ymax = upper_95), alpha = 0.2, fill = "midnightblue") +
-  geom_line(color = "purple4", size = 1, alpha = 0.6)+
-  geom_point(data = CLAD_NOCA_observed, aes(x = event_year, y = mean_CLAD), inherit.aes = FALSE, pch = 21, color = "black", fill = "red", cex = 3) +
+ggplot(site_prediction_jags, aes(mean, value, group = taxa))+
+  geom_point(aes(color = site_code))+
+  facet_wrap(~taxa)
+
+CLAD_TS <- site_prediction_jags%>%filter(taxa == "CLAD")%>%
+           ggplot(.)+
+             geom_line(aes(x = event_year, y = mean, group = park_code, color = as.character(fish)), lwd = 1, color = "midnightblue")+
+             geom_ribbon(aes(x = event_year, ymin = lower_95, ymax = upper_95, group = park_code), alpha = 0.2, fill = "midnightblue") +
+             geom_point(aes(x = event_year, y = value, group = park_code), cex=4, color = "black", pch = 21, bg = "grey70")+
+             geom_point(aes(x = event_year, y = mean, fill = as.character(fish)), cex = 4, color = "black", pch = 21)+
+             labs(y = expression(paste("log_10(Abundance)")), x = "", title = "CLAD predictions")+
+             theme_bw()+
+             theme(text = element_text(size=15, color = "black"),
+                   axis.text = element_text(size = 15, color = "black"),
+                   axis.text.x = element_text(angle = 45, hjust = 1))+
+             facet_wrap(~site_code)
+
+site_prediction_jags %>% filter(taxa == "COPE")%>%
+  ggplot(.)+
+  geom_line(aes(x = event_year, y = mean, group = park_code, color = as.character(fish)), lwd = 1, color = "midnightblue")+
+  geom_ribbon(aes(x = event_year, ymin = lower_95, ymax = upper_95, group = park_code), alpha = 0.2, fill = "midnightblue") +
+  geom_point(aes(x = event_year, y = value, group = park_code), cex=4, color = "black", pch = 21, bg = "grey70")+
+  geom_point(aes(x = event_year, y = mean, fill = as.character(fish)), cex = 4, color = "black", pch = 21)+
+  labs(y = expression(paste("log_10(Abundance)")), x = "", title = "COPE predictions")+
   theme_bw()+
-  labs(title = "A: NOCA CLAD FORECASTS")+
-  ylab(expression(paste("log10(CLAD Abundance + 1)")))+
-  xlab("")+
-  theme(axis.text=element_text(size=15, color = "black"),
-        axis.title=element_text(size=15, color = "black"),
-        panel.grid.major.x = element_blank(),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        legend.title = element_blank(),
-        title = element_text(size = 15),legend.position = "none",
-        legend.text = element_text(size = 16, color = "black"))
+  theme(text = element_text(size=15, color = "black"),
+        axis.text = element_text(size = 15, color = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap(~site_code)
+
+site_prediction_jags %>% filter(taxa == "RAP")%>%
+  ggplot(.)+
+  geom_line(aes(x = event_year, y = mean, group = park_code, color = as.character(fish)), lwd = 1, color = "midnightblue")+
+  geom_ribbon(aes(x = event_year, ymin = lower_95, ymax = upper_95, group = park_code), alpha = 0.2, fill = "midnightblue") +
+  geom_point(aes(x = event_year, y = value, group = park_code), cex=4, color = "black", pch = 21, bg = "grey70")+
+  geom_point(aes(x = event_year, y = mean, fill = as.character(fish)), cex = 4, color = "black", pch = 21)+
+  labs(y = expression(paste("log_10(Abundance)")), x = "", title = "RAP predictions")+
+  theme_bw()+
+  theme(text = element_text(size=15, color = "black"),
+        axis.text = element_text(size = 15, color = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap(~site_code)
+
+site_prediction_jags %>% filter(taxa == "MICRO")%>%
+  ggplot(.)+
+  geom_line(aes(x = event_year, y = mean, group = park_code, color = as.character(fish)), lwd = 1, color = "midnightblue")+
+  geom_ribbon(aes(x = event_year, ymin = lower_95, ymax = upper_95, group = park_code), alpha = 0.2, fill = "midnightblue") +
+  geom_point(aes(x = event_year, y = value, group = park_code), cex=4, color = "black", pch = 21, bg = "grey70")+
+  geom_point(aes(x = event_year, y = mean, fill = as.character(fish)), cex = 4, color = "black", pch = 21)+
+  labs(y = expression(paste("log_10(Abundance)")), x = "", title = "MICRO predictions")+
+  theme_bw()+
+  theme(text = element_text(size=15, color = "black"),
+        axis.text = element_text(size = 15, color = "black"),
+        axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap(~site_code)
 
 
 ##### UNCERTAINTY PARTITIONING DATA ####
 
-trap_all_IC <- list.files(data_path, pattern = "IC_UNC")%>%
+TEMP <- list.files(data_path, pattern = "TEMPERATURE_")%>%
   map(~ readRDS(file.path(data_path, .))) %>%
   data.table::rbindlist(fill = T)
-
-trap_all_IC <- cbind(trap_all_IC, forecast_type, forecast_number)
 
 trap_all_SWE <- list.files(data_path, pattern = "SWE_UNC")%>%
   map(~ readRDS(file.path(data_path, .))) %>%

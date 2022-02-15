@@ -1,29 +1,3 @@
-###############################
-# MACROINVERTEBRATE COMPILATION
-###############################
-
-# Macroinvert data
-macro_counts <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
-                           sheet = "BMI_Counts")
-# Lookup table for macro taxonomy
-macro_lookup <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
-                           sheet = "Taxon_Lookup")
-
-full_macro <- inner_join(x = macro_counts, y = macro_lookup, by = c("Taxon"))%>%
-  filter(!is.na(Count)) %>%
-  group_by(Park, Site_ID, Year, Phylum) %>%
-  summarise(sum_phylum_count = sum(Count))%>%
-  rename(park_code = Park,
-         site_code = Site_ID,
-         event_year = Year)%>%
-  melt(., id.vars = c("park_code","site_code","event_year","Phylum"))%>%
-  mutate(across(everything(), gsub, pattern = "_", replacement = ""))%>%
-  mutate(event_year = as.character(event_year),
-         value = as.numeric(value))%>%
-  spread(., key = Phylum, value = value)
-
-full_macro[is.na(full_macro)] <- 0
-
 #########################
 # ZOOPLANKTON COMPILATION
 #########################
@@ -114,10 +88,6 @@ env_dat_yr$site_code <- gsub("Easy Ridge", "EasyRidge", env_dat_yr$site_code)
 env_dat_yr$site_code <- gsub("Lower ", "", env_dat_yr$site_code)
 env_dat_yr$site_code <- gsub("La Crosse", "LaCrosse", env_dat_yr$site_code)
 
-########################
-# JOIN DATA FOR ANALYSIS
-########################
-
 env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code","event_year")) %>%
   filter(site_code != "La Crosse" & site_code != "Palisades" & site_code != "Hoh")%>%
   group_by(site_code, park_code)%>%
@@ -139,12 +109,106 @@ env_zoop_data <- env_dat_yr %>% left_join(., zoop, by = c("park_code","site_code
   filter(RAP >= 0)%>%
   filter(stability>0)
 
-zoop_fishless <- env_zoop_data %>% filter(fish ==0)
+ZOOP_all <- env_zoop_data %>%
+  group_by(site_code, event_year, park_code)%>%
+  summarize_all(funs(mean), na.rm = F)%>%
+  arrange(event_year)%>%
+  ungroup(.)%>%
+  select(event_year, site_code, park_code, COPE, CLAD, MICRO, RAP, Ca, lake_temp, Chlorophyll, fish)%>%
+  mutate(site_code = case_when(
+    site_code == "LH15" ~ 1,
+    site_code == "Allen" ~ 2,
+    site_code == "LP19" ~ 3,
+    site_code == "Deadwood" ~ 4,
+    site_code == "Blue" ~ 5,
+    site_code == "Blum" ~ 6,
+    site_code == "Silent" ~ 7,
+    site_code == "EasyRidge" ~ 8,
+    site_code == "East" ~ 9,
+    site_code == "Bowan" ~ 10,
+    site_code == "Triplet" ~ 11,
+    site_code == "Gladys" ~ 12,
+    site_code == "Ferry" ~ 13,
+    site_code == "Heather" ~ 14,
+    site_code == "Crazy" ~ 15,
+    site_code == "Milk" ~ 16,
+    site_code == "LaCrosse" ~ 17,
+    site_code == "Sunup" ~ 18,
+    site_code == "Connie" ~ 19))%>%
+  melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll","fish"))
 
-zoop_fish <- env_zoop_data %>% filter(fish ==1)
 
-mapping_zoop <- env_zoop_data %>%
-  select(park_code, site_code, lon, lat, Elevation_m, Depth_max, fish, solar_jas)
+ZOOP_fishless <- env_zoop_data %>% filter(fish == 0) %>%
+  group_by(site_code, event_year, park_code)%>%
+  summarize_all(funs(mean), na.rm = F)%>%
+  arrange(event_year)%>%
+  ungroup(.)%>%
+  select(event_year, site_code, park_code, COPE, CLAD, MICRO, RAP, Ca, lake_temp, Chlorophyll)%>%
+  mutate(site_code = case_when(
+    site_code == "Allen" ~ 1,
+    site_code == "Bowan" ~ 2,
+    site_code == "Milk" ~ 3,
+    site_code == "Silent" ~ 4,
+    site_code == "Triplet" ~ 5,
+    site_code == "Sunup" ~ 6,
+    site_code == "Blum" ~ 7,
+    site_code == "Connie" ~ 8,
+    site_code == "Crazy" ~ 9,
+    site_code == "East" ~ 10,
+    site_code == "EasyRidge" ~ 11,
+    site_code == "Ferry" ~ 12,
+    site_code == "LaCrosse" ~ 13))%>%
+  melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll"))
+
+
+ZOOP_fish <- env_zoop_data %>% filter(fish == 1) %>%
+  group_by(site_code, event_year, park_code)%>%
+  summarize_all(funs(mean), na.rm = F)%>%
+  arrange(event_year)%>%
+  ungroup(.)%>%
+  select(event_year, site_code, park_code, COPE, CLAD, MICRO, RAP, Ca, lake_temp, Chlorophyll)%>%
+  mutate(site_code = case_when(
+    site_code == "Blue" ~ 1,
+    site_code == "Gladys" ~ 2,
+    site_code == "Heather" ~ 3,
+    site_code == "LP19" ~ 4,
+    site_code == "Deadwood" ~ 5,
+    site_code == "LH15" ~ 6))%>%
+  melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll"))
+
+ZOOP_by_site <- env_zoop_data %>%
+  group_by(site_code, event_year, park_code)%>%
+  summarize_all(funs(mean), na.rm = F)%>%
+  arrange(event_year)%>%
+  ungroup(.)%>%
+  select(event_year, site_code, park_code, COPE, CLAD, MICRO, RAP, Ca, lake_temp, Chlorophyll, fish)%>%
+  melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll","fish"))
+
+###############################
+# MACROINVERTEBRATE COMPILATION
+###############################
+
+# Macroinvert data
+macro_counts <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
+                           sheet = "BMI_Counts")
+# Lookup table for macro taxonomy
+macro_lookup <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx",
+                           sheet = "Taxon_Lookup")
+
+full_macro <- inner_join(x = macro_counts, y = macro_lookup, by = c("Taxon"))%>%
+  filter(!is.na(Count)) %>%
+  group_by(Park, Site_ID, Year, Phylum) %>%
+  summarise(sum_phylum_count = sum(Count))%>%
+  rename(park_code = Park,
+         site_code = Site_ID,
+         event_year = Year)%>%
+  melt(., id.vars = c("park_code","site_code","event_year","Phylum"))%>%
+  mutate(across(everything(), gsub, pattern = "_", replacement = ""))%>%
+  mutate(event_year = as.character(event_year),
+         value = as.numeric(value))%>%
+  spread(., key = Phylum, value = value)
+
+full_macro[is.na(full_macro)] <- 0
 
 macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_code","event_year"))%>%
   select(-variable)%>%
@@ -164,9 +228,3 @@ macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_c
   mutate(DOC = ifelse(DOC<0,0,DOC))%>%
   mutate(DOC = log10(DOC+1))%>%
   ungroup(.)
-
-macro_fishless <- macro_join %>% filter(fish == 0) %>%
-  na.omit(.)
-
-macro_fish <- macro_join %>% filter(fish == 1) %>%
-  na.omit(.)
