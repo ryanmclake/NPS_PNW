@@ -130,6 +130,8 @@ for(g in 1:length(sites)){
     spread_draws(sigma,`alpha`,`beta`,`omega`,`phi`) %>%
     rename(ensemble = .iteration)
 
+  hist(site_zoop_parameters$beta)
+
   predict_function <- function(alpha, beta, phi, omega, TEMP, Ca, Chlorophyll, Q){
     est <- alpha + (beta * TEMP) + (omega * Ca) + (phi * Chlorophyll) + rnorm(1000, 0, sd = Q)
     return(est)
@@ -186,7 +188,7 @@ for(g in 1:length(sites)){
   ### SENSITIVITY ANALYSIS OF PARAMETERS TO OVERALL MODE FIT ###
   ##############################################################
 
-  ### PARAMETER ESTIMATE UNCERTAINTY (I.E. MODEL PROCESS UNCERTAINTY) ###
+  ### COEFFICE ESTIMATE UNCERTAINTY (I.E. MODEL PROCESS UNCERTAINTY) ###
 
   pred_data_dist <- data.frame(matrix(NA, nrow = 10, ncol = 1000))
   event_year <- c("2009","2010","2011","2012","2013","2014","2015","2016","2017","2018")
@@ -286,7 +288,7 @@ for(g in 1:length(sites)){
               var = var(value))
 
   data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,7,9)], pred_data_dist, by = "event_year"))%>%ungroup(.)
-  saveRDS(data_compare, paste0("./output/CHLOROPHYLL_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_",zoop_taxa[s],".rds"))
+  saveRDS(data_compare, paste0("./output/CHLOROPHYLL_",zoop_taxa[s],"_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_.rds"))
 
   ### CALCIUM PARAMETER UNCERTAINTY ###
   pred_data_dist <- data.frame(matrix(NA, nrow = 10, ncol = 1000))
@@ -319,7 +321,7 @@ for(g in 1:length(sites)){
               var = var(value))
 
   data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,7,9)], pred_data_dist, by = "event_year"))%>%ungroup(.)
-  saveRDS(data_compare, paste0("./output/CALCIUM_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_",zoop_taxa[s],".rds"))
+  saveRDS(data_compare, paste0("./output/CALCIUM_",zoop_taxa[s],"_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_.rds"))
 
   ### TEMPERATURE PARAMETER UNCERTAINTY ###
   pred_data_dist <- data.frame(matrix(NA, nrow = 10, ncol = 1000))
@@ -352,7 +354,7 @@ for(g in 1:length(sites)){
               var = var(value))
 
   data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,7,9)], pred_data_dist, by = "event_year"))%>%ungroup(.)
-  saveRDS(data_compare, paste0("./output/TEMPERATURE_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_",zoop_taxa[s],".rds"))
+  saveRDS(data_compare, paste0("./output/TEMPERATURE_",zoop_taxa[s],"_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_.rds"))
 
 
   ### TEMPERATURE PARAMETER UNCERTAINTY ###
@@ -386,7 +388,7 @@ for(g in 1:length(sites)){
               var = var(value))
 
   data_compare <- as.data.frame(left_join(ZOOP_jags[,c(1,2,3,7,9)], pred_data_dist, by = "event_year"))%>%ungroup(.)
-  saveRDS(data_compare, paste0("./output/INTERCEPT_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_",zoop_taxa[s],".rds"))
+  saveRDS(data_compare, paste0("./output/INTERCEPT_",zoop_taxa[s],"_UNC_MCMC_JAGS_PREDICTION_",sites[g],"_.rds"))
 
  }
 }
