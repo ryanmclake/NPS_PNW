@@ -6,67 +6,72 @@ set.seed(71)
 
 
 ### Perform an RDA on the Zooplankton in Fishless lakes
-zoop_cap <- capscale(formula = select(zoop_fishless, CLAD:RAP) ~
-                       lake_temp + Ca + Chlorophyll, data = zoop_fishless, distance = "bray")
+zoop_cap <- capscale(formula = select(env_zoop_data, CLAD:RAP) ~
+                       lake_temp + Ca + Chlorophyll, data = env_zoop_data, distance = "bray")
 
-zoop_null <- capscale(formula = select(zoop_fishless, CLAD:RAP) ~ 1,
-                      data = zoop_fishless, distance = "bray")
+zoop_null <- capscale(formula = select(env_zoop_data, CLAD:RAP) ~ 1,
+                      data = env_zoop_data, distance = "bray")
 
 mods <- ordiR2step(zoop_null, scope = formula(zoop_cap), trace = 0, direction = c("forward"),
                  permutations = how(nperm = 999), steps = 100)
 mods$anova
-model_site_points <- bind_cols(data.frame(scores(zoop_cap)$sites),zoop_fishless)
+model_site_points <- bind_cols(data.frame(scores(zoop_cap)$sites),env_zoop_data)
 
 all_data_model <- autoplot(zoop_cap, layers = c("biplot", "species")) +
   geom_point(data = model_site_points,
-             aes(x = CAP1, y = CAP2, color = as.character(park_code)), size = 4, alpha = 0.5)+
+             aes(x = CAP1, y = CAP2, color = as.character(event_year)), size = 4, alpha = 0.5)+
   labs(title = "Zooplankton Abundance - Fishless Lakes")+
   theme_classic()
 
 all_data_model
 ggsave("./figures/CAPSCALE_model_output.jpg", width = 10, height = 10, units = "in")
 
-ZOOP <- zoop_fishless %>%
-  group_by(site_code, event_year, park_code)%>%
-  summarize_all(funs(mean), na.rm = F)%>%
-  mutate(lag_CLAD = as.numeric(lag(CLAD)),
-         lag_COPE = as.numeric(lag(COPE)),
-         lag_RAP = as.numeric(lag(RAP)),
-         lag_MICRO = as.numeric(lag(MICRO)))%>%
-  arrange(event_year)%>%
-  ungroup(.)
+zoop_taxa <- c("COPE", "CLAD", "MICRO", "RAP")
+sites <- c("Allen","Blue","Bowan","Gladys","Heather","LP19","Milk","Silent","Triplet","Deadwood","LH15",
+           "Sunup","Blum","Connie","Crazy","East","EasyRidge","Ferry","LaCrosse")
 
-sites <- c("Allen","Bowan","Milk","Silent","Sunup","Triplet","Blum","Connie","Crazy","East","EasyRidge","Ferry","LaCrosse" )
+model_predict <- list()
+model_coef <- list()
+model_eval <- data.frame(matrix(NA, nrow = length(zoop_taxa),ncol = 5))
 
-model_eval_CLAD <- data.frame(matrix(NA, nrow = length(sites),ncol = 5))
-model_predict_CLAD <- list()
+for(s in 1:length(zoop_taxa)){
 
-for(s in 1:length(sites)){
+  ZOOP <- ZOOP_by_site %>% filter(variable == zoop_taxa[s]) %>%
+          mutate(fish = as.character(fish)) %>%
+          lme(na.action=na.omit,value ~ lake_temp + Ca + Chlorophyll + fish, random = ~ 1|site_code, method="ML",data = .) %>%
+          predict(., interval = "prediction") %>% as.data.frame(.)
+  event_year <- ZOOP_by_site %>% filter(variable == zoop_taxa[s]) %>% select(event_year, site_code, variable)
+  predict <- bind_cols(ZOOP, event_year)
+  names(predict) <- c("abundance", "event_year", "site_code", "taxa" )
 
-  CLAD_model_eval <- ZOOP %>% filter(site_code == sites[s]) %>%
-    lme(na.action=na.omit,CLAD ~ lake_temp + Ca + Chlorophyll, random = ~ 1|park_code, method="ML",data = .) %>%
-    predict(., interval = "prediction") %>% as.data.frame(.) %>% mutate(site_code = sites[s])
-  a <- rownames(CLAD_model_eval)
-  event_year <- ZOOP %>% filter(site_code == sites[s]) %>% select(event_year)
-  CLAD_model_eval <- cbind(CLAD_model_eval=CLAD_model_eval, event_year)
-  names(CLAD_model_eval) <- c("abundance", "site_code", "event_year")
+  model_predict[[s]] <- predict
 
-  model_predict_CLAD[[s]] <- CLAD_model_eval
+  mod <- ZOOP_by_site %>% filter(variable == zoop_taxa[s]) %>%
+    mutate(fish = as.character(fish)) %>%
+    lme(na.action=na.omit,value ~ lake_temp + Ca + Chlorophyll + fish, random = ~ 1|site_code, method="REML",data = .)
+summary(mod)
 
-  CLAD_site_summary <- ZOOP %>% filter(site_code == sites[s]) %>%
-    do(glance(lme(na.action=na.omit,CLAD ~ lake_temp + Ca + Chlorophyll, random = ~ 1|park_code, method="ML",data = .)))%>%
-    as.data.frame() %>% mutate(model=sites[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,model)
+  coef <- ZOOP_by_site %>% filter(variable == zoop_taxa[s]) %>%
+    mutate(fish = as.character(fish)) %>%
+    lme(na.action=na.omit,value ~ lake_temp + Ca + Chlorophyll + fish, random = ~ 1|site_code, method="ML",data = .) %>%
+    coef(.) %>% as.data.frame(.) %>% mutate(taxa = zoop_taxa[s])
 
-  model_eval_CLAD[s,] <- as.data.frame(rbind(CLAD_site_summary))
+  model_coef[[s]] <- coef
 
+  site_summary <- ZOOP_by_site %>% filter(variable == zoop_taxa[s]) %>% mutate(fish = as.character(fish)) %>%
+                  do(glance(lme(na.action=na.omit,value ~ lake_temp + Ca + Chlorophyll + fish, random = ~ 1|site_code,
+                                method="ML",data = .)))%>%
+                  as.data.frame() %>% mutate(taxa = zoop_taxa[s]) %>% dplyr::select(sigma,logLik,AIC,BIC,taxa)
+
+  model_eval[s,] <- as.data.frame(rbind(site_summary))
 }
 
-model_predict_CLAD = do.call(rbind, model_predict_CLAD)
-names(model_eval_CLAD) <- c("sigma","logLik","AIC","BIC","site_code")
-model_eval_CLAD$zoop_taxa <- "CLAD"
+model_predict = do.call(rbind, model_predict)
+model_coef = do.call(rbind, model_coef)
+names(model_eval) <- c("sigma","logLik","AIC","BIC","taxa")
 
 CLAD_compare <- ZOOP %>% select(event_year, site_code, park_code, CLAD)%>%
-  left_join(., model_predict_CLAD, by = c("event_year", "site_code"))
+  left_join(., model_predict, by = c("event_year", "site_code"))
 
 RMSE <- CLAD_compare%>%
   group_by(site_code, park_code)%>%
@@ -569,17 +574,16 @@ ggplot(RAP_compare, aes(x = event_year, y = RAP))+
 
 
 ### Perform an RDA on the Macro invertebrates
-macro_cap <- capscale(formula = select(macro_fishless, Annelida:Porifera) ~
-                        Chlorophyll + Elevation_m + SWE_May_snotel +
-                        Ca + solar_jas, data = macro_fishless, distance = "bray")
+macro_cap <- capscale(formula = select(macro_aggregate, FCR:SHR) ~
+                        Chlorophyll + Ca + lake_temp, data = macro_aggregate, distance = "bray")
 
-macro_null <- capscale(formula = select(macro_fishless, Annelida:Porifera) ~ 1,
-                      data = macro_fishless, distance = "bray")
+macro_null <- capscale(formula = select(macro_aggregate, FCR:SHR) ~ 1,
+                      data = macro_aggregate, distance = "bray")
 
 mods_macro <- ordiR2step(macro_null, scope = formula(macro_cap), trace = 0, direction = c("forward"),
                    permutations = how(nperm = 999), steps = 100)
 mods_macro$anova
-model_site_points <- bind_cols(data.frame(scores(macro_cap)$sites),macro_fishless)
+model_site_points <- bind_cols(data.frame(scores(macro_cap)$sites),macro_aggregate)
 
 all_data_model <- autoplot(macro_cap, layers = c("biplot", "species")) +
   geom_point(data = model_site_points,

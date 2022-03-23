@@ -138,6 +138,33 @@ ZOOP_all <- env_zoop_data %>%
   melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll","fish"))
 
 
+
+
+alpha_diversity_ZOOP <- ZOOP_all %>%
+  group_by(variable, event_year, site_code) %>%
+  mutate(value = ifelse(value<=0,0,value)) %>%
+  summarise(value = sum(value))%>%
+  group_by(site_code, event_year) %>%
+  summarize(alpha = vegan::diversity(value,
+                                     index = "simpson"))
+
+beta_diversity_ZOOP <- ZOOP_all %>%
+  group_by(variable, event_year, park_code) %>%
+  mutate(value = ifelse(value<=0,0,value)) %>%
+  summarise(value = sum(value))%>%
+  group_by(park_code, event_year) %>%
+  summarize(alpha = vegan::diversity(value,
+                                     index = "simpson"))
+
+gamma_diversity_ZOOP <- ZOOP_all %>%
+  group_by(variable, event_year) %>%
+  mutate(value = ifelse(value<=0,0,value)) %>%
+  summarise(value = sum(value))%>%
+  group_by(event_year) %>%
+  summarize(alpha = vegan::diversity(value,
+                                     index = "simpson"))
+
+
 ZOOP_fishless <- env_zoop_data %>% filter(fish == 0) %>%
   group_by(site_code, event_year, park_code)%>%
   summarize_all(funs(mean), na.rm = F)%>%
@@ -197,16 +224,16 @@ macro_lookup <- read_excel(path = "./data/NCCN_ML_BMI_Counts_FCA_2019JUL09.xlsx"
 
 full_macro <- inner_join(x = macro_counts, y = macro_lookup, by = c("Taxon"))%>%
   filter(!is.na(Count)) %>%
-  group_by(Park, Site_ID, Year, Phylum) %>%
+  group_by(Park, Site_ID, Year, Genus) %>%
   summarise(sum_phylum_count = sum(Count))%>%
   rename(park_code = Park,
          site_code = Site_ID,
          event_year = Year)%>%
-  melt(., id.vars = c("park_code","site_code","event_year","Phylum"))%>%
+  melt(., id.vars = c("park_code","site_code","event_year","Genus"))%>%
   mutate(across(everything(), gsub, pattern = "_", replacement = ""))%>%
   mutate(event_year = as.character(event_year),
          value = as.numeric(value))%>%
-  spread(., key = Phylum, value = value)
+  spread(., key = Genus, value = value)
 
 full_macro[is.na(full_macro)] <- 0
 
@@ -221,10 +248,243 @@ macro_join <- env_dat_yr %>% left_join(., full_macro, by = c("park_code","site_c
          stability = SurfTemp - BotTemp,
          delta_temp = lake_temp - lag(lake_temp))%>%
   select(-SurfTemp,-BotTemp,-MidTemp)%>%
-  mutate_at(vars(-site_code, -park_code, -event_year),
-            funs(imputeTS::na_interpolation(., option = "spline")))%>%
   mutate_at(vars(-site_code, -park_code, -Elevation_m,-solar_jas, -event_year, -lon, -lat, -DOC, -fish, -delta_temp, -SWE_May_snotel),
             funs((log10(.+1))))%>%
   mutate(DOC = ifelse(DOC<0,0,DOC))%>%
   mutate(DOC = log10(DOC+1))%>%
+  ungroup(.) %>%
+  select(event_year, site_code, park_code, Ablabesmyia,
+         Aeshna,Agabini,Agabus,Alotanypus,Ameletus,
+         Apatania,Atrichopogon,Baetis,`Bezzia/Palpomyia`,Boreochlus,
+         Brillia,Caecidotea,Callibaetis,Capniidae,Ceratopogon,
+         Chaetocladius,Chaoborus,Chironomus,Chrysops,Cinygma,
+         Cinygmula,Cladopelma,Cladotanytarsus,Clinocera,Clistoronia,
+         Cordulia,Corynoneura,Crangonyx,Cricotopus,Cryptochironomus,
+         Culicoides,Dasyhelea,Desmona,Diamesa,Dicosmoecus,
+         Dicranota,Dicrotendipes,Diplocladius,Dixa,Dixella,
+         Drunella,Ecclisocosmoecus,Ecclisomyia,Endochironomus,Epeorus,
+         Ephemerella,Ephydridae,Eukiefferiella,Ferrissia,Forcipomyia,
+         Gammarus,Glyptotendipes,Halesochila,Heleniella,Helobdella,
+         Hesperoconopa,Hesperophylax,Heterlimnius,Heterotrissocladius,Hexatoma,
+         Hyalella,Hydra,Hydrobaenus,Isoperla,Larsia,
+         Leuctridae,Limnephilus,Limnophila,Limnophyes,Macropelopia,
+         Megarcys,Metriocnemus,Micropsectra,Microtendipes,Molophilus,
+         Monodiamesa,`Moselia infuscata`,Musculium,Mystacides,Nanocladius,
+         Neoleptophlebia,Neothremma,Notonecta,Odontomesa,Oreogeton,
+         Orthocladius,Pagastia,Pagastiella,Parachaetocladius,Parachirnomus,
+         Paracladopelma,Paraleptophlebia,Paraleuctra,Paramerina,Parametriocnemus,
+         Paraphaenocladius,Paratanytarsus,Parochlus,Parorthocladius,Phaenopsectra,
+         Philocasca,Phryganeidae,Pisidium,Platysmittia,Polycentropus,
+         Polypedilum,Potthastia,Procladius,Prodiamesa,Protanypus,
+         Psectrocladius,Psectrotanypus,Pseudodiamesa,Pseudorthocladius,Pseudosmittia,
+         Psilometriocnemus,Psychoda,Psychoglypha,Ranatra,Rheocricotopus,
+         Rhyacophila,Sanfilippodytes,Sergentia,Setvena,Sialis,
+         Simulium,Siphlonurus,Somatochlora,Sphaerium,Stempellinella,
+         Stictochironomus,Stictotarsus,Stratiomys,Sublettea,Suwallia,
+         Sweltsa,Synorthocladius,Tanytarsus,Thermonectus,Thienemanniella,
+         Thienemannimyia,Tipula,Tvetenia,`Visoka cataractae`,Wiedemannia,
+         Yoraperla,`Zapada cinctipes`,`Zapada columbiana`,`Zapada frigida`,`Zapada oregonensis group`,
+         Zavrelimyia, Ca, lake_temp, Chlorophyll, fish)%>%
+  melt(., id.vars = c("event_year","site_code","park_code","Ca","lake_temp","Chlorophyll","fish")) %>%
+  mutate(FFG = case_when(
+    variable == "Ablabesmyia" ~ "GCR",
+    variable == "Aeshna" ~ "PRED",
+    variable == "Agabini" ~ "PRED",
+    variable == "Agabus" ~ "PRED",
+    variable == "Alotanypus" ~ "GCR",
+    variable == "Ameletus" ~ "GCR",
+    variable == "Apatania" ~ "GCR",
+    variable == "Atrichopogon" ~ "GCR",
+    variable == "Baetis" ~ "GCR",
+    variable == "Bezzia/Palpomyia" ~ "PRED",
+    variable == "Boreochlus" ~ "GCR",
+    variable == "Brillia" ~ "GCR",
+    variable == "Caecidotea" ~ "GCR",
+    variable == "Callibaetis" ~ "GCR",
+    variable == "Capniidae" ~ "SHR",
+    variable == "Ceratopogon" ~ "PRED",
+    variable == "Chaetocladius" ~ "GCR",
+    variable == "Chaoborus" ~ "PRED",
+    variable == "Chironomus" ~ "GCR",
+    variable == "Chrysops" ~ "PRED",
+    variable == "Cinygma" ~ "SCR",
+    variable == "Cinygmula" ~ "SCR",
+    variable == "Cladopelma" ~ "GCR",
+    variable == "Cladotanytarsus" ~ "FCR",
+    variable == "Clinocera" ~ "PRED",
+    variable == "Clistoronia" ~ "SHR",
+    variable == "Cordulia" ~ "PRED",
+    variable == "Corynoneura" ~ "GCR",
+    variable == "Crangonyx" ~ "GCR",
+    variable == "Cricotopus" ~ "GCR",
+    variable == "Cryptochironomus" ~ "GCR",
+    variable == "Culicoides" ~ "GCR",
+    variable == "Dasyhelea" ~ "GCR",
+    variable == "Desmona" ~ "SHR",
+    variable == "Diamesa" ~ "GCR",
+    variable == "Dicosmoecus" ~ "SHR",
+    variable == "Dicranota" ~ "SHR",
+    variable == "Dicrotendipes" ~ "GCR",
+    variable == "Diplocladius" ~ "GCR",
+    variable == "Dixa" ~ "FCR",
+    variable == "Dixella" ~ "FCR",
+    variable == "Drunella" ~ "GCR",
+    variable == "Ecclisocosmoecus" ~ "SHR",
+    variable == "Ecclisomyia" ~ "SHR",
+    variable == "Endochironomus" ~ "GCR",
+    variable == "Epeorus" ~ "SCR",
+    variable == "Ephemerella" ~ "GCR",
+    variable == "Ephydridae" ~ "PRED",
+    variable == "Eukiefferiella" ~ "GCR",
+    variable == "Ferrissia" ~ "SCR",
+    variable == "Forcipomyia" ~ "GCR",
+    variable == "Gammarus" ~ "GCR",
+    variable == "Glyptotendipes" ~ "GCR",
+    variable == "Halesochila" ~ "SHR",
+    variable == "Heleniella" ~ "GCR",
+    variable == "Helobdella" ~ "PRED",
+    variable == "Hesperoconopa" ~ "SHR",
+    variable == "Hesperophylax" ~ "SHR",
+    variable == "Heterlimnius" ~ "SHR",
+    variable == "Heterotrissocladius" ~ "GCR",
+    variable == "Hexatoma" ~ "SHR",
+    variable == "Hyalella" ~ "GCR",
+    variable == "Hydra" ~ "PRED",
+    variable == "Hydrobaenus" ~ "GCR",
+    variable == "Isoperla" ~ "PRED",
+    variable == "Larsia" ~ "GCR",
+    variable == "Leuctridae" ~ "SHR",
+    variable == "Limnephilus" ~ "SHR",
+    variable == "Limnophila" ~ "SHR",
+    variable == "Limnophyes" ~ "GCR",
+    variable == "Macropelopia" ~ "GCR",
+    variable == "Megarcys" ~ "PRED",
+    variable == "Metriocnemus" ~ "GCR",
+    variable == "Micropsectra" ~ "GCR",
+    variable == "Microtendipes" ~ "GCR",
+    variable == "Molophilus" ~ "SHR",
+    variable == "Monodiamesa" ~ "GCR",
+    variable == "Moselia infuscata" ~ "SHR",
+    variable == "Musculium" ~ "FCR",
+    variable == "Mystacides" ~ "GCR",
+    variable == "Nanocladius" ~ "GCR",
+    variable == "Neoleptophlebia" ~ "GCR",
+    variable == "Neothremma" ~ "SCR",
+    variable == "Notonecta" ~ "PRED",
+    variable == "Odontomesa" ~ "GCR",
+    variable == "Oreogeton" ~ "PRED",
+    variable == "Orthocladius" ~ "GCR",
+    variable == "Pagastia" ~ "GCR",
+    variable == "Pagastiella" ~ "GCR",
+    variable == "Parachaetocladius" ~ "GCR",
+    variable == "Parachirnomus" ~ "GCR",
+    variable == "Paracladopelma" ~ "GCR",
+    variable == "Paraleptophlebia" ~ "GCR",
+    variable == "Paraleuctra" ~ "SHR",
+    variable == "Paramerina" ~ "GCR",
+    variable == "Parametriocnemus" ~ "GCR",
+    variable == "Paraphaenocladius" ~ "GCR",
+    variable == "Paratanytarsus" ~ "GCR",
+    variable == "Parochlus" ~ "GCR",
+    variable == "Parorthocladius" ~ "GCR",
+    variable == "Phaenopsectra" ~ "GCR",
+    variable == "Philocasca" ~ "SHR",
+    variable == "Phryganeidae" ~ "SHR",
+    variable == "Pisidium" ~ "FCR",
+    variable == "Platysmittia" ~ "GCR",
+    variable == "Polycentropus" ~ "PRED",
+    variable == "Polypedilum" ~ "GCR",
+    variable == "Potthastia" ~ "GCR",
+    variable == "Procladius" ~ "GCR",
+    variable == "Prodiamesa" ~ "GCR",
+    variable == "Protanypus" ~ "GCR",
+    variable == "Psectrocladius" ~ "GCR",
+    variable == "Psectrotanypus" ~ "GCR",
+    variable == "Pseudodiamesa" ~ "GCR",
+    variable == "Pseudorthocladius" ~ "GCR",
+    variable == "Pseudosmittia" ~ "GCR",
+    variable == "Psilometriocnemus" ~ "GCR",
+    variable == "Psychoda" ~ "GCR",
+    variable == "Psychoglypha" ~ "SHR",
+    variable == "Ranatra" ~ "PRED",
+    variable == "Rheocricotopus" ~ "GCR",
+    variable == "Rhyacophila" ~ "PRED",
+    variable == "Sanfilippodytes" ~ "PRED",
+    variable == "Sergentia" ~ "GCR",
+    variable == "Setvena" ~ "PRED",
+    variable == "Sialis" ~ "PRED",
+    variable == "Simulium" ~ "FCR",
+    variable == "Siphlonurus" ~ "GCR",
+    variable == "Somatochlora" ~ "PRED",
+    variable == "Sphaerium" ~ "FCR",
+    variable == "Stempellinella" ~ "GCR",
+    variable == "Stictochironomus" ~ "GCR",
+    variable == "Stictotarsus" ~ "PRED",
+    variable == "Stratiomys" ~ "GCR",
+    variable == "Sublettea" ~ "GCR",
+    variable == "Suwallia" ~ "SHR",
+    variable == "Sweltsa" ~ "SHR",
+    variable == "Synorthocladius" ~ "GCR",
+    variable == "Tanytarsus" ~ "GCR",
+    variable == "Thermonectus" ~ "PRED",
+    variable == "Thienemanniella" ~ "GCR",
+    variable == "Thienemannimyia" ~ "GCR",
+    variable == "Tipula" ~ "SHR",
+    variable == "Tvetenia" ~ "GCR",
+    variable == "Visoka cataractae" ~ "SHR",
+    variable == "Wiedemannia" ~ "PRED",
+    variable == "Yoraperla" ~ "PRED",
+    variable == "Zapada cinctipes" ~ "SHR",
+    variable == "Zapada columbiana" ~ "SHR",
+    variable == "Zapada frigida" ~ "SHR",
+    variable == "Zapada oregonensis group" ~ "SHR",
+    variable == "Zavrelimyia" ~ "GCR",
+    TRUE ~ NA_character_))%>%
+  group_by(site_code)%>%
+  mutate_at(vars(-site_code, -park_code, -event_year, -variable, -FFG),
+          funs(imputeTS::na_interpolation(., option = "linear")))
+
+macro_aggregate <- macro_join %>%
+  group_by(site_code, variable, FFG, park_code, event_year) %>%
+  summarize(sum_species = sum(value),
+            lake_temp = mean(lake_temp),
+            Ca = mean(Ca),
+            Chlorophyll = mean(Chlorophyll),
+            fish = mean(fish)) %>%
+  mutate(sum_species = as.numeric(sum_species))%>%
+  spread(.,                                  # Applying spread function
+         key = FFG,
+         value = sum_species) %>%
+  mutate_at(vars(-site_code, -event_year),
+            funs(imputeTS::na_interpolation(., option = "linear"))) %>%
   ungroup(.)
+
+macro_aggregate %>%
+  group_by(variable, event_year, site_code) %>%
+  mutate(sum_species = ifelse(sum_species<=0,0,sum_species)) %>%
+  summarise(sum_species = sum(sum_species))%>%
+  group_by(site_code, event_year) %>%
+  summarize(alpha = vegan::diversity(sum_species,
+                                     index = "simpson")) %>%
+  ggplot(., aes(event_year, alpha, color = site_code))+
+  geom_point()
+
+macro_aggregate %>%
+  group_by(variable, event_year, park_code) %>%
+  mutate(sum_species = ifelse(sum_species<=0,0,sum_species)) %>%
+  summarise(sum_species = sum(sum_species))%>%
+  group_by(park_code, event_year) %>%
+  summarize(alpha = vegan::diversity(sum_species,
+                                     index = "simpson"))%>%
+  ggplot(., aes(event_year, alpha, color = park_code))+
+  geom_point()
+
+gamma_diversity_BMI <- macro_aggregate %>%
+  group_by(variable, event_year) %>%
+  mutate(sum_species = ifelse(sum_species<=0,0,sum_species)) %>%
+  summarise(sum_species = sum(sum_species))%>%
+  group_by(event_year) %>%
+  summarize(gamma = vegan::diversity(sum_species,
+                                     index = "simpson"))%>%
+  ggplot(., aes(event_year, gamma))+
+  geom_point()
